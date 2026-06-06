@@ -1,2 +1,30 @@
+
+
+# Flutter/Dart
+.dart_tool/
+.packages
+.pub/
+build/
+
+# IDE
+.idea/
+.vscode/
+
+# Android
+android/.gradle/
+android/app/debug/
+android/app/profile/
+android/app/release/
 android/key.properties
+
+# iOS
+ios/Pods/
+
+# Env & secrets
 .env
+
+
+# Generated
+.flutter-plugins
+.flutter-plugins-dependencies
+.metadata
