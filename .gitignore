@@ -1,9 +1,8 @@
 
 
 # Flutter/Dart
-.dart_tool/
-.packages
-.pub/
+.dart_tool
+
 build/
 
 # IDE
@@ -11,22 +10,16 @@ build/
 .vscode/
 
 # Android
-android/.gradle/
-android/app/debug/
-android/app/profile/
-android/app/release/
 android/key.properties
 android/google-services.json
 android/app/google-services.json
 
-# iOS
-ios/Pods/
 
 # Env & secrets
 .env
 
-#lib
-lib/firebase_options.dart
+# APIS
+ lib/firebase_options.dart
 
 # Generated
 .flutter-plugins
