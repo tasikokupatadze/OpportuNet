@@ -10,6 +10,8 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'dart:async';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:firebase_storage/firebase_storage.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'package:opportunet/firebase_options.dart';
 import 'roadmaps.dart';
 import 'volunteering.dart';
 import 'exchange.dart';
@@ -17,25 +19,36 @@ import 'schools.dart';
 import 'olympiads.dart';
 import 'login.dart';
 import 'userprofile.dart';
-import 'savedPosts.dart';
+import 'savedposts.dart';
 import 'calendar.dart';
-import 'commentsSheet.dart';
+import 'commentssheet.dart';
 import 'createpost.dart';
-import 'signup.dart';
+import 'authgate.dart';
 
 ValueNotifier<ThemeMode> themeNotifier = ValueNotifier(ThemeMode.light);
 
 const String profileImageKey = 'profile_image';
 const String aboutMeKey = "about_me";
 
-
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  SharedPreferences prefs = await SharedPreferences.getInstance();
+
+  bool isDarkMode = prefs.getBool('isDarkMode') ?? false;
+
+  themeNotifier.value = isDarkMode ? ThemeMode.dark : ThemeMode.light;
+
+  await Firebase.initializeApp(
+    options: DefaultFirebaseOptions.currentPlatform,
+  );
+
   await dotenv.load(fileName: ".env");
+
   runApp(const MyApp());
 }
 
-final apiKey = dotenv.env['groqApiKey'];
+final groqApiKey = dotenv.env['groqApiKey'];
 
 List<Map<String, String>> users = [];
 
@@ -58,7 +71,7 @@ class MyApp extends StatelessWidget {
             primaryColor: const Color(0xff84d6fe),
           ),
           themeMode: mode,
-          home: const SignUpScreen(),
+          home: const AuthGate(),
         );
       },
     );
@@ -248,13 +261,13 @@ class _HomeScreenState extends State<HomeScreen> {
       }
 
       final response = await httpai.post(
-        Uri.parse("https://api.groq.com/openai/v1/chat/completions"),
+        Uri.parse("https://callai-docslpktsq-uc.a.run.app"),
         headers: {
           "Content-Type": "application/json",
-          "Authorization": "Bearer $apiKey",
+          
         },
         body: jsonEncode({
-          "model": "llama-3.3-70b-versatile",
+          "model": "llama-3.1-8b-instant",
           "messages": history,
           "temperature": 0.7,
         }),
@@ -590,8 +603,7 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget _getPage(int index) {
     switch (index) {
       case 0:
-        return Container(
-          child: Column(
+        return Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Padding(
@@ -706,8 +718,8 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
               ),
             ],
-          ),
-        );
+          );
+        
 
       case 1:
         return Scaffold(
@@ -752,7 +764,6 @@ class _HomeScreenState extends State<HomeScreen> {
                   final String username = data["username"] ?? "user";
                   final String text = data["text"] ?? "";
                   final String imageUrl = data["imageUrl"] ?? "";
-                  final String profileImage = data["profileImage"] ?? "";
                   final int likes = data["likes"] ?? 0;
                   final int commentsCount = data["commentsCount"] ?? 0;
                   final List likedBy = data["likedBy"] ?? [];
@@ -794,30 +805,37 @@ class _HomeScreenState extends State<HomeScreen> {
                                   ),
                                 );
                               },
-                              child: CircleAvatar(
-                                radius: 22,
-                                backgroundColor: Colors.grey.shade300,
-                                child: ClipOval(
-                                  child: profileImage.isNotEmpty
-                                      ? Image.network(
-                                          profileImage,
-                                          width: 44,
-                                          height: 44,
-                                          fit: BoxFit.cover,
-                                          errorBuilder:
-                                              (context, error, stackTrace) {
-                                            return const Icon(
+                              child: FutureBuilder<DocumentSnapshot>(
+                                  future: FirebaseFirestore.instance
+                                      .collection('users')
+                                      .doc(userId)
+                                      .get(),
+                                  builder: (context, snapshot) {
+                                    String profileImage = "";
+
+                                    if (snapshot.hasData && snapshot.data!.exists) {
+                                      final userData =
+                                          snapshot.data!.data() as Map<String, dynamic>;
+
+                                      profileImage = userData["profileImage"] ?? "";
+                                    }
+
+                                    return CircleAvatar(
+                                      radius: 22,
+                                      backgroundColor: Colors.grey.shade300,
+                                      backgroundImage:
+                                          profileImage.isNotEmpty
+                                              ? NetworkImage(profileImage)
+                                              : null,
+                                      child: profileImage.isEmpty
+                                          ? const Icon(
                                               Icons.person,
                                               color: Colors.white,
-                                            );
-                                          },
-                                        )
-                                      : const Icon(
-                                          Icons.person,
-                                          color: Colors.white,
-                                        ),
+                                            )
+                                          : null,
+                                    );
+                                  },
                                 ),
-                              ),
                             ),
                             const SizedBox(width: 10),
                             Expanded(
@@ -878,7 +896,9 @@ class _HomeScreenState extends State<HomeScreen> {
                                         .doc(post.id)
                                         .delete();
 
-                                    ScaffoldMessenger.of(context).showSnackBar(
+                                        if (!context.mounted) return;
+
+                                      ScaffoldMessenger.of(context).showSnackBar(
                                       const SnackBar(
                                           content: Text("Post deleted")),
                                     );
@@ -1032,6 +1052,8 @@ class _HomeScreenState extends State<HomeScreen> {
                                         [currentUser.uid]),
                                   });
 
+                                  if (!context.mounted) return;
+
                                   ScaffoldMessenger.of(context).showSnackBar(
                                     const SnackBar(
                                       content: Text("Removed from saved posts"),
@@ -1042,6 +1064,8 @@ class _HomeScreenState extends State<HomeScreen> {
                                     "savedBy": FieldValue.arrayUnion(
                                         [currentUser.uid]),
                                   }, SetOptions(merge: true));
+
+                                  if (!context.mounted) return;
 
                                   ScaffoldMessenger.of(context).showSnackBar(
                                     const SnackBar(content: Text("Saved")),

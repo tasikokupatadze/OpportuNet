@@ -17,6 +17,7 @@ android/app/google-services.json
 
 # Env & secrets
 .env
+.env.txt
 
 # APIS
  lib/firebase_options.dart

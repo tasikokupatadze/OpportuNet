@@ -74,7 +74,12 @@ class _CalendarScreenState extends State<CalendarScreen> {
         _events.clear();
         _events.addAll(loadedEvents);
       });
-    } catch (e) {}
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Failed to load event")),
+      );
+    }
   }
 
   void _addEvent() {
@@ -188,6 +193,8 @@ class _CalendarScreenState extends State<CalendarScreen> {
                       });
 
                       await _loadEventsFromFirestore();
+
+                      if (!context.mounted) return;
 
                       Navigator.pop(context);
                       ScaffoldMessenger.of(context).showSnackBar(

@@ -212,7 +212,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
                       'aboutMe': '',
                     });
 
-                    if (!mounted) return;
+                    if (!context.mounted) return;
 
                     Navigator.pushReplacement(
                       context,
@@ -227,7 +227,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
                       message = "Password is too weak";
                     } else if (e.code == "invalid-email") {
                       message = "Invalid email";
-                    }
+                    } 
 
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(content: Text(message)),
