@@ -1,7 +1,7 @@
 #!/bin/sh
 # This is a generated file; do not edit or check into version control.
 export "FLUTTER_ROOT=D:\flutter D\flutter_windows_3.41.6-stable\flutter"
-export "FLUTTER_APPLICATION_PATH=D:\OpportuNet_Test1"
+export "FLUTTER_APPLICATION_PATH=D:\OpportuNet_V1.0.0"
 export "COCOAPODS_PARALLEL_CODE_SIGN=true"
 export "FLUTTER_TARGET=lib\main.dart"
 export "FLUTTER_BUILD_DIR=build"

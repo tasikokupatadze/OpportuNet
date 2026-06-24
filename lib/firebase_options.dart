@@ -72,5 +72,4 @@ class DefaultFirebaseOptions {
     storageBucket: 'opportunet-bd7b8.firebasestorage.app',
     iosBundleId: 'com.example.helloWorld',
   );
-
 }

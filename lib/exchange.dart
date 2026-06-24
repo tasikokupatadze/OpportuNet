@@ -138,7 +138,6 @@ class _ExchPrgrmScreenState extends State<ExchPrgrmScreen> {
                                 "Open",
                                 style: TextStyle(
                                   color: Colors.black,
-                                  
                                 ),
                               ),
                             )
@@ -150,7 +149,6 @@ class _ExchPrgrmScreenState extends State<ExchPrgrmScreen> {
                 },
               ),
             ),
-            
             TextButton(
                 onPressed: () async {
                   final Uri url = Uri.parse("https://www.snow.day/");

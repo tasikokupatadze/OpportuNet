@@ -8,7 +8,6 @@ import 'dart:io';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'dart:async';
-import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:opportunet/firebase_options.dart';
@@ -43,12 +42,8 @@ void main() async {
     options: DefaultFirebaseOptions.currentPlatform,
   );
 
-  await dotenv.load(fileName: ".env");
-
   runApp(const MyApp());
 }
-
-final groqApiKey = dotenv.env['groqApiKey'];
 
 List<Map<String, String>> users = [];
 
@@ -264,7 +259,6 @@ class _HomeScreenState extends State<HomeScreen> {
         Uri.parse("https://callai-docslpktsq-uc.a.run.app"),
         headers: {
           "Content-Type": "application/json",
-          
         },
         body: jsonEncode({
           "model": "llama-3.1-8b-instant",
@@ -604,122 +598,121 @@ class _HomeScreenState extends State<HomeScreen> {
     switch (index) {
       case 0:
         return Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Padding(
-                padding: const EdgeInsets.fromLTRB(16, 14, 16, 4),
-                child: SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton.icon(
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xff84d6fe),
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(vertical: 16),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(18),
-                      ),
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 14, 16, 4),
+              child: SizedBox(
+                width: double.infinity,
+                child: ElevatedButton.icon(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xff84d6fe),
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(18),
                     ),
-                    onPressed: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) =>
-                              CalendarScreen(isOrganizer: _isOrganizer),
-                        ),
-                      );
-                    },
-                    icon: const Icon(Icons.calendar_month),
-                    label: const Text(
-                      "Academic Calendar",
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
+                  ),
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) =>
+                            CalendarScreen(isOrganizer: _isOrganizer),
                       ),
+                    );
+                  },
+                  icon: const Icon(Icons.calendar_month),
+                  label: const Text(
+                    "Academic Calendar",
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
                     ),
                   ),
                 ),
               ),
-              Expanded(
-                child: Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 10, 16, 16),
-                  child: GridView.count(
-                    crossAxisCount: 2,
-                    crossAxisSpacing: 14,
-                    mainAxisSpacing: 14,
-                    childAspectRatio: 0.83,
-                    children: [
-                      _hubTile(
-                        title: "Olympiads & Contests",
-                        subtitle: "National & International",
-                        icon: Icons.emoji_events_rounded,
-                        accent: const Color(0xfff7d774),
-                        onTap: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                                builder: (_) => const OlympScreen()),
-                          );
-                        },
-                      ),
-                      _hubTile(
-                        title: "Volunteering",
-                        subtitle: "Organizations & Local places",
-                        icon: Icons.volunteer_activism_rounded,
-                        accent: const Color(0xffb8f0c9),
-                        onTap: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                                builder: (_) => const VlntrScreen()),
-                          );
-                        },
-                      ),
-                      _hubTile(
-                        title: "Exchange Programs",
-                        subtitle: "Short & long term programs",
-                        icon: Icons.flight_takeoff_rounded,
-                        accent: const Color(0xffffc6b3),
-                        onTap: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                                builder: (_) => const ExchPrgrmScreen()),
-                          );
-                        },
-                      ),
-                      _hubTile(
-                        title: "Roadmaps",
-                        subtitle: "For each year of high schools",
-                        icon: Icons.route_rounded,
-                        accent: const Color(0xffbfe8ff),
-                        onTap: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                                builder: (_) => const RoadmapScreen()),
-                          );
-                        },
-                      ),
-                      _hubTile(
-                        title: "Schools",
-                        subtitle: "Best schools for college prep",
-                        icon: Icons.school_rounded,
-                        accent: const Color(0xffd8c7ff),
-                        onTap: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                                builder: (_) => const SchoolScreen()),
-                          );
-                        },
-                      ),
-                    ],
-                  ),
+            ),
+            Expanded(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(16, 10, 16, 16),
+                child: GridView.count(
+                  crossAxisCount: 2,
+                  crossAxisSpacing: 14,
+                  mainAxisSpacing: 14,
+                  childAspectRatio: 0.83,
+                  children: [
+                    _hubTile(
+                      title: "Olympiads & Contests",
+                      subtitle: "National & International",
+                      icon: Icons.emoji_events_rounded,
+                      accent: const Color(0xfff7d774),
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                              builder: (_) => const OlympScreen()),
+                        );
+                      },
+                    ),
+                    _hubTile(
+                      title: "Volunteering",
+                      subtitle: "Organizations & Local places",
+                      icon: Icons.volunteer_activism_rounded,
+                      accent: const Color(0xffb8f0c9),
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                              builder: (_) => const VlntrScreen()),
+                        );
+                      },
+                    ),
+                    _hubTile(
+                      title: "Exchange Programs",
+                      subtitle: "Short & long term programs",
+                      icon: Icons.flight_takeoff_rounded,
+                      accent: const Color(0xffffc6b3),
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                              builder: (_) => const ExchPrgrmScreen()),
+                        );
+                      },
+                    ),
+                    _hubTile(
+                      title: "Roadmaps",
+                      subtitle: "For each year of high schools",
+                      icon: Icons.route_rounded,
+                      accent: const Color(0xffbfe8ff),
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                              builder: (_) => const RoadmapScreen()),
+                        );
+                      },
+                    ),
+                    _hubTile(
+                      title: "Schools",
+                      subtitle: "Best schools for college prep",
+                      icon: Icons.school_rounded,
+                      accent: const Color(0xffd8c7ff),
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                              builder: (_) => const SchoolScreen()),
+                        );
+                      },
+                    ),
+                  ],
                 ),
               ),
-            ],
-          );
-        
+            ),
+          ],
+        );
 
       case 1:
         return Scaffold(
@@ -806,36 +799,37 @@ class _HomeScreenState extends State<HomeScreen> {
                                 );
                               },
                               child: FutureBuilder<DocumentSnapshot>(
-                                  future: FirebaseFirestore.instance
-                                      .collection('users')
-                                      .doc(userId)
-                                      .get(),
-                                  builder: (context, snapshot) {
-                                    String profileImage = "";
+                                future: FirebaseFirestore.instance
+                                    .collection('users')
+                                    .doc(userId)
+                                    .get(),
+                                builder: (context, snapshot) {
+                                  String profileImage = "";
 
-                                    if (snapshot.hasData && snapshot.data!.exists) {
-                                      final userData =
-                                          snapshot.data!.data() as Map<String, dynamic>;
+                                  if (snapshot.hasData &&
+                                      snapshot.data!.exists) {
+                                    final userData = snapshot.data!.data()
+                                        as Map<String, dynamic>;
 
-                                      profileImage = userData["profileImage"] ?? "";
-                                    }
+                                    profileImage =
+                                        userData["profileImage"] ?? "";
+                                  }
 
-                                    return CircleAvatar(
-                                      radius: 22,
-                                      backgroundColor: Colors.grey.shade300,
-                                      backgroundImage:
-                                          profileImage.isNotEmpty
-                                              ? NetworkImage(profileImage)
-                                              : null,
-                                      child: profileImage.isEmpty
-                                          ? const Icon(
-                                              Icons.person,
-                                              color: Colors.white,
-                                            )
-                                          : null,
-                                    );
-                                  },
-                                ),
+                                  return CircleAvatar(
+                                    radius: 22,
+                                    backgroundColor: Colors.grey.shade300,
+                                    backgroundImage: profileImage.isNotEmpty
+                                        ? NetworkImage(profileImage)
+                                        : null,
+                                    child: profileImage.isEmpty
+                                        ? const Icon(
+                                            Icons.person,
+                                            color: Colors.white,
+                                          )
+                                        : null,
+                                  );
+                                },
+                              ),
                             ),
                             const SizedBox(width: 10),
                             Expanded(
@@ -896,9 +890,9 @@ class _HomeScreenState extends State<HomeScreen> {
                                         .doc(post.id)
                                         .delete();
 
-                                        if (!context.mounted) return;
+                                    if (!context.mounted) return;
 
-                                      ScaffoldMessenger.of(context).showSnackBar(
+                                    ScaffoldMessenger.of(context).showSnackBar(
                                       const SnackBar(
                                           content: Text("Post deleted")),
                                     );

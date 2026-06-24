@@ -143,7 +143,6 @@ class _SchoolScreenState extends State<SchoolScreen> {
                                 "Open",
                                 style: TextStyle(
                                   color: Colors.black,
-                                  
                                 ),
                               ),
                             )

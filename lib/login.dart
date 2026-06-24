@@ -3,6 +3,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'signup.dart';
 import 'main.dart';
+import 'resetpass.dart';
 
 AuthCredential? pendingGoogleCredential;
 
@@ -26,8 +27,6 @@ Future<UserCredential?> signInWithGoogleWeb() async {
 }
 
 Future<void> createUserDoc(User user) async {
-  debugPrint("CREATE USER DOC START");
-
   await FirebaseFirestore.instance.collection('users').doc(user.uid).set({
     'email': user.email ?? '',
     'name': user.displayName?.split(' ').first ?? '',
@@ -73,13 +72,11 @@ Future<UserCredential?> signInWithEmailAutoLink(
           pendingGoogleCredential!,
         );
         pendingGoogleCredential = null;
-        debugPrint("Google account linked successfully");
       }
     }
 
     return userCredential;
-  } on FirebaseAuthException catch (e) {
-    debugPrint("Email login error: ${e.code}");
+  } on FirebaseAuthException {
     rethrow;
   }
 }
@@ -92,9 +89,6 @@ Future<UserCredential?> handleGoogleAutoLink() async {
   } on FirebaseAuthException catch (e) {
     if (e.code == 'account-exists-with-different-credential') {
       pendingGoogleCredential = e.credential;
-      final email = e.email;
-
-      debugPrint("Account already exists for $email");
 
       throw FirebaseAuthException(
         code: 'need-email-login',
@@ -185,12 +179,8 @@ class _LoginScreenState extends State<LoginScreen> {
                   }
 
                   try {
-                    debugPrint("LOGIN BUTTON CLICKED");
-
                     final email = loginemailctrl.text.trim();
                     final password = loginpswrdctrl.text.trim();
-
-                    debugPrint("EMAIL: $email");
 
                     final userCredential =
                         await FirebaseAuth.instance.signInWithEmailAndPassword(
@@ -198,12 +188,9 @@ class _LoginScreenState extends State<LoginScreen> {
                       password: password,
                     );
 
-                    debugPrint("LOGIN SUCCESS");
-
                     final user = userCredential.user;
 
                     if (user != null) {
-                      debugPrint("USER EXISTS: ${user.uid}");
                       await createUserDoc(user);
                     }
 
@@ -214,14 +201,10 @@ class _LoginScreenState extends State<LoginScreen> {
                       MaterialPageRoute(builder: (_) => const HomeScreen()),
                     );
                   } on FirebaseAuthException catch (e) {
-                    debugPrint("FIREBASE ERROR: ${e.code}");
-
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(content: Text("Login failed: ${e.code}")),
                     );
-                  } catch (e) {
-                    debugPrint("UNKNOWN ERROR: $e");
-                  }
+                  } {}
                 },
                 child: const Text(
                   "Login",
@@ -232,7 +215,26 @@ class _LoginScreenState extends State<LoginScreen> {
                   ),
                 ),
               ),
-              const SizedBox(height: 15),
+              const SizedBox(height: 10),
+              TextButton(
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => const ResetPassScreen(),
+                    ),
+                  );
+                },
+                child: const Text(
+                  "Forgot password?",
+                  style: TextStyle(
+                    color: Color(0xff84d6fe),
+                    fontWeight: FontWeight.bold,
+                    fontSize: 15,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 10),
               ElevatedButton.icon(
                 onPressed: () async {
                   try {
@@ -241,7 +243,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     if (user != null) {}
 
                     if (!context.mounted) return;
-                    
+
                     {
                       Navigator.pushReplacement(
                         context,
@@ -275,7 +277,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   ),
                 ),
               ),
-              const SizedBox(height: 15),
+              const SizedBox(height: 10),
               TextButton(
                 onPressed: () {
                   Navigator.push(

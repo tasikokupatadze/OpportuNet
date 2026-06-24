@@ -146,7 +146,6 @@ class _OlympScreenState extends State<OlympScreen> {
                                 "Open",
                                 style: TextStyle(
                                   color: Colors.black,
-                                  
                                 ),
                               ),
                             )
@@ -158,7 +157,6 @@ class _OlympScreenState extends State<OlympScreen> {
                 },
               ),
             ),
-            
             const Text(
               "Winning these Olympiads or contests can lead to competing internationally (IMO, IPhO, ISEF, etc.)",
               textAlign: TextAlign.center,

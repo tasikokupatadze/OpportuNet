@@ -22,7 +22,6 @@ class _SignUpScreenState extends State<SignUpScreen> {
   final TextEditingController pswrdctrl = TextEditingController();
   final TextEditingController namectrl = TextEditingController();
   final TextEditingController surnamectrl = TextEditingController();
-  final TextEditingController agectrl = TextEditingController();
 
   @override
   void initState() {
@@ -33,7 +32,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
   void dispose() {
     namectrl.dispose();
     surnamectrl.dispose();
-    agectrl.dispose();
+
     signupemailctrl.dispose();
     pswrdctrl.dispose();
     super.dispose();
@@ -82,16 +81,6 @@ class _SignUpScreenState extends State<SignUpScreen> {
                     RegExp(r'[a-zA-Zა-ჰ]'),
                   ),
                 ],
-              ),
-              const SizedBox(height: 15),
-              TextField(
-                controller: agectrl,
-                decoration: const InputDecoration(
-                    labelText: "Age",
-                    border: OutlineInputBorder(),
-                    labelStyle: TextStyle(color: Color(0xff84d6fe))),
-                keyboardType: TextInputType.number,
-                inputFormatters: [FilteringTextInputFormatter.digitsOnly],
               ),
               const SizedBox(height: 15),
               TextField(
@@ -167,11 +156,11 @@ class _SignUpScreenState extends State<SignUpScreen> {
                   ),
                 ),
               ),
+              const SizedBox(height: 20),
               ElevatedButton(
                 onPressed: () async {
                   if (namectrl.text.isEmpty ||
                       surnamectrl.text.isEmpty ||
-                      agectrl.text.isEmpty ||
                       pswrdctrl.text.isEmpty ||
                       !signupemailctrl.text.contains("@") ||
                       !signupemailctrl.text.contains(".")) {
@@ -206,7 +195,6 @@ class _SignUpScreenState extends State<SignUpScreen> {
                         .set({
                       'name': namectrl.text.trim(),
                       'surname': surnamectrl.text.trim(),
-                      'age': int.parse(agectrl.text.trim()),
                       'email': signupemailctrl.text.trim(),
                       'role': 'user',
                       'aboutMe': '',
@@ -227,7 +215,9 @@ class _SignUpScreenState extends State<SignUpScreen> {
                       message = "Password is too weak";
                     } else if (e.code == "invalid-email") {
                       message = "Invalid email";
-                    } 
+                    }
+
+                    if(!context.mounted) return;
 
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(content: Text(message)),
