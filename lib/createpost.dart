@@ -4,7 +4,8 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'dart:async';
 
 class CreatePost extends StatefulWidget {
-  const CreatePost({super.key});
+  final String? category;
+  const CreatePost({super.key, this.category});
 
   @override
   State<CreatePost> createState() => _CreatePostState();
@@ -13,6 +14,16 @@ class CreatePost extends StatefulWidget {
 class _CreatePostState extends State<CreatePost> {
   final TextEditingController controller = TextEditingController();
   bool _isPosting = false;
+  final List<String> _categories = [
+    'General',
+    'Math',
+    'Coding',
+    'Arts',
+    'Languages',
+    'Career',
+  ];
+
+  String _selectedCategory = 'General';
 
   Future<void> uploadPost() async {
     final text = controller.text.trim();
@@ -37,7 +48,20 @@ class _CreatePostState extends State<CreatePost> {
           .doc(user.uid)
           .get();
 
-      final userData = userDoc.data() ?? {};
+      if (!userDoc.exists || userDoc.data() == null) {
+        if (!mounted) return;
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              "Your profile could not be found. Please log out and log in again.",
+            ),
+          ),
+        );
+        return;
+      }
+
+      final userData = userDoc.data()!;
 
       final String name = userData["name"] ?? "";
       final String surname = userData["surname"] ?? "";
@@ -56,6 +80,7 @@ class _CreatePostState extends State<CreatePost> {
         "likedBy": [],
         "commentsCount": 0,
         "savedBy": [],
+        "category": _selectedCategory,
       });
 
       controller.clear();
@@ -74,6 +99,15 @@ class _CreatePostState extends State<CreatePost> {
           _isPosting = false;
         });
       }
+    }
+  }
+
+  @override
+  void initState() {
+    super.initState();
+
+    if (widget.category != null && _categories.contains(widget.category)) {
+      _selectedCategory = widget.category!;
     }
   }
 
@@ -122,6 +156,33 @@ class _CreatePostState extends State<CreatePost> {
               ],
             ),
             const SizedBox(height: 20),
+            DropdownButtonFormField<String>(
+              initialValue: _selectedCategory,
+              decoration: InputDecoration(
+                labelText: 'Post category',
+                prefixIcon: const Icon(
+                  Icons.category_outlined,
+                  color: Color(0xff2b88b4),
+                ),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(14),
+                ),
+              ),
+              items: _categories.map((category) {
+                return DropdownMenuItem<String>(
+                  value: category,
+                  child: Text(category),
+                );
+              }).toList(),
+              onChanged: (value) {
+                if (value != null) {
+                  setState(() {
+                    _selectedCategory = value;
+                  });
+                }
+              },
+            ),
+            const SizedBox(height: 16),
             Expanded(
               child: Container(
                 padding: const EdgeInsets.all(14),

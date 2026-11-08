@@ -53,7 +53,6 @@ class _AddOlympScreenState extends State<AddOlympScreen> {
   Future<void> _pickImage() async {
     final XFile? image = await _picker.pickImage(
       source: ImageSource.gallery,
-      imageQuality: 85,
     );
 
     if (image == null) return;

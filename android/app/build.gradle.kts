@@ -18,7 +18,7 @@ if (keystorePropertiesFile.exists()) {
 }
 
 android {
-    namespace = "com.example.opportunet"
+    namespace = "com.opportunet.app"
     compileSdk = flutter.compileSdkVersion
     ndkVersion = "27.0.12077973"
 
