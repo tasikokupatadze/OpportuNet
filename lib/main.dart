@@ -10,19 +10,12 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'dart:async';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:firebase_core/firebase_core.dart';
-import 'package:opportunet/firebase_options.dart';
-import 'roadmaps.dart';
-import 'volunteering.dart';
-import 'exchange.dart';
-import 'schools.dart';
-import 'olympiads.dart';
+import 'firebase_options.dart';
 import 'login.dart';
-import 'userprofile.dart';
 import 'savedposts.dart';
-import 'calendar.dart';
-import 'commentssheet.dart';
-import 'createpost.dart';
 import 'authgate.dart';
+import 'home_feed.dart';
+import 'community_feed.dart';
 
 ValueNotifier<ThemeMode> themeNotifier = ValueNotifier(ThemeMode.light);
 
@@ -83,9 +76,9 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  int _selectedIndex = 0;
-
   String? _profileImagePath;
+
+  int _selectedIndex = 0;
 
   bool _editNamePrfl = false;
   bool _editSurnamePrfl = false;
@@ -145,7 +138,7 @@ class _HomeScreenState extends State<HomeScreen> {
         doc = await docRef.get();
       }
 
-      final data = doc.data() as Map<String, dynamic>;
+      final data = doc.data() ?? <String, dynamic>{};
 
       if (!mounted) return;
 
@@ -157,26 +150,75 @@ class _HomeScreenState extends State<HomeScreen> {
         _profileImagePath = data['profileImage'] ?? '';
         _isOrganizer = (data['role'] ?? 'user') == 'organizer';
       });
-    } catch (e) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Failed to load profile")),
-      );
+      } catch (e) {
+        if (!mounted) return;
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text("Failed to load profile: $e")),
+        );
+      }
+  }
+
+    Future<bool> _saveProfile() async {
+      final user = FirebaseAuth.instance.currentUser;
+      if (user == null) return false;
+
+      final oldName = _namePrflctrl.text.trim();
+      final oldSurname = _surnamePrflctrl.text.trim();
+
+      final newUsername = "$oldName $oldSurname".trim();
+
+      try {
+        await FirebaseFirestore.instance
+            .collection('users')
+            .doc(user.uid)
+            .set({
+          'name': oldName,
+          'surname': oldSurname,
+          'age': _agePrflctrl.text.trim(),
+          'aboutMe': _abtMePrflctrl.text.trim(),
+          'profileImage': _profileImagePath ?? '',
+          'email': user.email ?? '',
+        }, SetOptions(merge: true));
+
+        // Keep the username on existing posts in sync.
+        final posts = await FirebaseFirestore.instance
+            .collection('posts')
+            .where('userId', isEqualTo: user.uid)
+            .get();
+
+        for (var i = 0; i < posts.docs.length; i += 450) {
+          final batch = FirebaseFirestore.instance.batch();
+          final end = (i + 450 < posts.docs.length)
+              ? i + 450
+              : posts.docs.length;
+
+          for (final post in posts.docs.sublist(i, end)) {
+            batch.update(post.reference, {
+              'username': newUsername.isEmpty ? 'user' : newUsername,
+            });
+          }
+
+          await batch.commit();
+        }
+
+        if (!mounted) return true;
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Profile updated successfully')),
+        );
+
+        return true;
+      } catch (e) {
+        if (!mounted) return false;
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to save profile: $e')),
+        );
+
+        return false;
+      }
     }
-  }
-
-  Future<void> _saveProfile() async {
-    final user = FirebaseAuth.instance.currentUser;
-    if (user == null) return;
-
-    await FirebaseFirestore.instance.collection('users').doc(user.uid).set({
-      'name': _namePrflctrl.text.trim(),
-      'surname': _surnamePrflctrl.text.trim(),
-      'age': _agePrflctrl.text.trim(),
-      'aboutMe': _abtMePrflctrl.text.trim(),
-      'profileImage': _profileImagePath ?? '',
-    }, SetOptions(merge: true));
-  }
 
   @override
   void dispose() {
@@ -369,6 +411,8 @@ class _HomeScreenState extends State<HomeScreen> {
 
       final downloadUrl = await storageRef.getDownloadURL();
 
+      if (!mounted) return;
+
       setState(() {
         _profileImagePath = downloadUrl;
       });
@@ -510,607 +554,12 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Widget _hubTile({
-    required String title,
-    required String subtitle,
-    required IconData icon,
-    required Color accent,
-    required VoidCallback onTap,
-  }) {
-    return Material(
-      color: Colors.white,
-      elevation: 1.5,
-      shadowColor: Colors.black.withValues(alpha: 0.05),
-      borderRadius: BorderRadius.circular(24),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(24),
-        onTap: onTap,
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Container(
-                width: 48,
-                height: 48,
-                decoration: BoxDecoration(
-                  color: accent,
-                  borderRadius: BorderRadius.circular(16),
-                ),
-                child: Icon(
-                  icon,
-                  color: Colors.black87,
-                  size: 24,
-                ),
-              ),
-              const SizedBox(height: 14),
-              Text(
-                title,
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.black87,
-                  height: 1.2,
-                ),
-              ),
-              const SizedBox(height: 8),
-              Expanded(
-                child: Text(
-                  subtitle,
-                  maxLines: 4,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    fontSize: 12.5,
-                    color: Colors.grey,
-                    height: 1.35,
-                  ),
-                ),
-              ),
-              const SizedBox(height: 8),
-              const Row(
-                children: [
-                  Text(
-                    "Explore",
-                    style: TextStyle(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w600,
-                      color: Color(0xff2b88b4),
-                    ),
-                  ),
-                  SizedBox(width: 6),
-                  Icon(
-                    Icons.arrow_forward_rounded,
-                    size: 18,
-                    color: Color(0xff2b88b4),
-                  ),
-                ],
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
   Widget _getPage(int index) {
     switch (index) {
       case 0:
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 14, 16, 4),
-              child: SizedBox(
-                width: double.infinity,
-                child: ElevatedButton.icon(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xff84d6fe),
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(vertical: 16),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(18),
-                    ),
-                  ),
-                  onPressed: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (_) =>
-                            CalendarScreen(isOrganizer: _isOrganizer),
-                      ),
-                    );
-                  },
-                  icon: const Icon(Icons.calendar_month),
-                  label: const Text(
-                    "Academic Calendar",
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ),
-              ),
-            ),
-            Expanded(
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(16, 10, 16, 16),
-                child: GridView.count(
-                  crossAxisCount: 2,
-                  crossAxisSpacing: 14,
-                  mainAxisSpacing: 14,
-                  childAspectRatio: 0.83,
-                  children: [
-                    _hubTile(
-                      title: "Olympiads & Contests",
-                      subtitle: "National & International",
-                      icon: Icons.emoji_events_rounded,
-                      accent: const Color(0xfff7d774),
-                      onTap: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                              builder: (_) => const OlympScreen()),
-                        );
-                      },
-                    ),
-                    _hubTile(
-                      title: "Volunteering",
-                      subtitle: "Organizations & Local places",
-                      icon: Icons.volunteer_activism_rounded,
-                      accent: const Color(0xffb8f0c9),
-                      onTap: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                              builder: (_) => const VlntrScreen()),
-                        );
-                      },
-                    ),
-                    _hubTile(
-                      title: "Exchange Programs",
-                      subtitle: "Short & long term programs",
-                      icon: Icons.flight_takeoff_rounded,
-                      accent: const Color(0xffffc6b3),
-                      onTap: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                              builder: (_) => const ExchPrgrmScreen()),
-                        );
-                      },
-                    ),
-                    _hubTile(
-                      title: "Roadmaps",
-                      subtitle: "For each year of high schools",
-                      icon: Icons.route_rounded,
-                      accent: const Color(0xffbfe8ff),
-                      onTap: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                              builder: (_) => const RoadmapScreen()),
-                        );
-                      },
-                    ),
-                    _hubTile(
-                      title: "Schools",
-                      subtitle: "Best schools for college prep",
-                      icon: Icons.school_rounded,
-                      accent: const Color(0xffd8c7ff),
-                      onTap: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                              builder: (_) => const SchoolScreen()),
-                        );
-                      },
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ],
-        );
-
+        return HomeFeed(isOrganizer: _isOrganizer);
       case 1:
-        return Scaffold(
-          body: StreamBuilder<QuerySnapshot>(
-            stream: FirebaseFirestore.instance
-                .collection("posts")
-                .orderBy("timestamp", descending: true)
-                .snapshots(),
-            builder: (context, snapshot) {
-              if (snapshot.hasError) {
-                return Center(
-                  child: Text(
-                    "Error: ${snapshot.error}",
-                    style: const TextStyle(color: Colors.black),
-                  ),
-                );
-              }
-
-              if (snapshot.connectionState == ConnectionState.waiting) {
-                return const Center(child: CircularProgressIndicator());
-              }
-
-              final posts = snapshot.data!.docs;
-
-              if (posts.isEmpty) {
-                return const Center(
-                  child: Text(
-                    "No posts yet",
-                    style: TextStyle(fontSize: 16, color: Colors.black54),
-                  ),
-                );
-              }
-
-              return ListView.builder(
-                padding: const EdgeInsets.fromLTRB(12, 14, 12, 90),
-                itemCount: posts.length,
-                itemBuilder: (context, index) {
-                  final post = posts[index];
-                  final data = post.data() as Map<String, dynamic>;
-
-                  final String userId = data["userId"] ?? "";
-                  final String username = data["username"] ?? "user";
-                  final String text = data["text"] ?? "";
-                  final String imageUrl = data["imageUrl"] ?? "";
-                  final int likes = data["likes"] ?? 0;
-                  final int commentsCount = data["commentsCount"] ?? 0;
-                  final List likedBy = data["likedBy"] ?? [];
-
-                  final currentUser = FirebaseAuth.instance.currentUser;
-                  final bool isLiked =
-                      currentUser != null && likedBy.contains(currentUser.uid);
-
-                  final List savedBy = List.from(data["savedBy"] ?? []);
-                  final bool isSaved =
-                      currentUser != null && savedBy.contains(currentUser.uid);
-
-                  return Container(
-                    margin: const EdgeInsets.only(bottom: 14),
-                    padding: const EdgeInsets.all(14),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(22),
-                      border: Border.all(color: const Color(0xffdbeaf2)),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withValues(alpha: 0.04),
-                          blurRadius: 10,
-                          offset: const Offset(0, 4),
-                        ),
-                      ],
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          children: [
-                            GestureDetector(
-                              onTap: () {
-                                Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder: (_) => UserProfile(uid: userId),
-                                  ),
-                                );
-                              },
-                              child: FutureBuilder<DocumentSnapshot>(
-                                future: FirebaseFirestore.instance
-                                    .collection('users')
-                                    .doc(userId)
-                                    .get(),
-                                builder: (context, snapshot) {
-                                  String profileImage = "";
-
-                                  if (snapshot.hasData &&
-                                      snapshot.data!.exists) {
-                                    final userData = snapshot.data!.data()
-                                        as Map<String, dynamic>;
-
-                                    profileImage =
-                                        userData["profileImage"] ?? "";
-                                  }
-
-                                  return CircleAvatar(
-                                    radius: 22,
-                                    backgroundColor: Colors.grey.shade300,
-                                    backgroundImage: profileImage.isNotEmpty
-                                        ? NetworkImage(profileImage)
-                                        : null,
-                                    child: profileImage.isEmpty
-                                        ? const Icon(
-                                            Icons.person,
-                                            color: Colors.white,
-                                          )
-                                        : null,
-                                  );
-                                },
-                              ),
-                            ),
-                            const SizedBox(width: 10),
-                            Expanded(
-                              child: GestureDetector(
-                                onTap: () {
-                                  Navigator.push(
-                                    context,
-                                    MaterialPageRoute(
-                                      builder: (_) => UserProfile(uid: userId),
-                                    ),
-                                  );
-                                },
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      username,
-                                      style: const TextStyle(
-                                        fontWeight: FontWeight.w700,
-                                        fontSize: 15,
-                                        color: Colors.black,
-                                      ),
-                                    ),
-                                    const SizedBox(height: 3),
-                                    Container(
-                                      padding: const EdgeInsets.symmetric(
-                                        horizontal: 8,
-                                        vertical: 3,
-                                      ),
-                                      decoration: BoxDecoration(
-                                        color: const Color(0xff84d6fe)
-                                            .withValues(alpha: 0.18),
-                                        borderRadius: BorderRadius.circular(20),
-                                      ),
-                                      child: const Text(
-                                        "Community post",
-                                        style: TextStyle(
-                                          fontSize: 11,
-                                          color: Color(0xff84d6fe),
-                                          fontWeight: FontWeight.w600,
-                                        ),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ),
-                            PopupMenuButton<String>(
-                              onSelected: (value) async {
-                                if (value == "delete") {
-                                  final currentUser =
-                                      FirebaseAuth.instance.currentUser;
-                                  if (currentUser == null) return;
-
-                                  if (currentUser.uid == userId) {
-                                    await FirebaseFirestore.instance
-                                        .collection("posts")
-                                        .doc(post.id)
-                                        .delete();
-
-                                    if (!context.mounted) return;
-
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      const SnackBar(
-                                          content: Text("Post deleted")),
-                                    );
-                                  } else {
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      const SnackBar(
-                                        content: Text(
-                                            "You can only delete your own posts"),
-                                      ),
-                                    );
-                                  }
-                                }
-                              },
-                              itemBuilder: (context) => const [
-                                PopupMenuItem(
-                                  value: "delete",
-                                  child: Text("Delete"),
-                                ),
-                              ],
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 14),
-                        if (text.isNotEmpty)
-                          Text(
-                            text,
-                            style: const TextStyle(
-                              fontSize: 15,
-                              height: 1.45,
-                              color: Colors.black87,
-                            ),
-                          ),
-                        if (imageUrl.isNotEmpty) ...[
-                          const SizedBox(height: 12),
-                          ClipRRect(
-                            borderRadius: BorderRadius.circular(18),
-                            child: Image.network(
-                              imageUrl,
-                              width: double.infinity,
-                              height: 220,
-                              fit: BoxFit.cover,
-                              errorBuilder: (context, error, stackTrace) {
-                                return Container(
-                                  height: 220,
-                                  color: Colors.grey.shade200,
-                                  child: const Center(
-                                    child: Icon(
-                                      Icons.broken_image_outlined,
-                                      size: 42,
-                                      color: Colors.grey,
-                                    ),
-                                  ),
-                                );
-                              },
-                            ),
-                          ),
-                        ],
-                        const SizedBox(height: 14),
-                        Row(
-                          children: [
-                            InkWell(
-                              borderRadius: BorderRadius.circular(20),
-                              onTap: () async {
-                                final currentUser =
-                                    FirebaseAuth.instance.currentUser;
-                                if (currentUser == null) return;
-
-                                final postRef = FirebaseFirestore.instance
-                                    .collection("posts")
-                                    .doc(post.id);
-
-                                if (isLiked) {
-                                  await postRef.update({
-                                    "likedBy": FieldValue.arrayRemove(
-                                        [currentUser.uid]),
-                                    "likes": FieldValue.increment(-1),
-                                  });
-                                } else {
-                                  await postRef.update({
-                                    "likedBy": FieldValue.arrayUnion(
-                                        [currentUser.uid]),
-                                    "likes": FieldValue.increment(1),
-                                  });
-                                }
-                              },
-                              child: Padding(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 8,
-                                  vertical: 6,
-                                ),
-                                child: Row(
-                                  children: [
-                                    Icon(
-                                      isLiked
-                                          ? Icons.favorite
-                                          : Icons.favorite_border,
-                                      color:
-                                          isLiked ? Colors.red : Colors.black87,
-                                      size: 22,
-                                    ),
-                                    const SizedBox(width: 5),
-                                    Text("$likes"),
-                                  ],
-                                ),
-                              ),
-                            ),
-                            const SizedBox(width: 10),
-                            InkWell(
-                              borderRadius: BorderRadius.circular(20),
-                              onTap: () {
-                                showModalBottomSheet(
-                                  context: context,
-                                  isScrollControlled: true,
-                                  backgroundColor: Colors.white,
-                                  builder: (_) =>
-                                      CommentsSheet(postId: post.id),
-                                );
-                              },
-                              child: Padding(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 8,
-                                  vertical: 6,
-                                ),
-                                child: Row(
-                                  children: [
-                                    const Icon(
-                                      Icons.mode_comment_outlined,
-                                      size: 21,
-                                      color: Colors.black87,
-                                    ),
-                                    const SizedBox(width: 5),
-                                    Text("$commentsCount"),
-                                  ],
-                                ),
-                              ),
-                            ),
-                            const Spacer(),
-                            IconButton(
-                              onPressed: () async {
-                                final currentUser =
-                                    FirebaseAuth.instance.currentUser;
-                                if (currentUser == null) return;
-
-                                final postRef = FirebaseFirestore.instance
-                                    .collection("posts")
-                                    .doc(post.id);
-
-                                if (isSaved) {
-                                  await postRef.update({
-                                    "savedBy": FieldValue.arrayRemove(
-                                        [currentUser.uid]),
-                                  });
-
-                                  if (!context.mounted) return;
-
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    const SnackBar(
-                                      content: Text("Removed from saved posts"),
-                                    ),
-                                  );
-                                } else {
-                                  await postRef.set({
-                                    "savedBy": FieldValue.arrayUnion(
-                                        [currentUser.uid]),
-                                  }, SetOptions(merge: true));
-
-                                  if (!context.mounted) return;
-
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    const SnackBar(content: Text("Saved")),
-                                  );
-                                }
-                              },
-                              icon: Icon(
-                                isSaved
-                                    ? Icons.bookmark
-                                    : Icons.bookmark_border,
-                                color: Colors.yellow,
-                              ),
-                            ),
-                          ],
-                        ),
-                        const Divider(height: 18),
-                        GestureDetector(
-                          onTap: () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (_) => UserProfile(uid: userId),
-                              ),
-                            );
-                          },
-                          child: const Text(
-                            "View profile",
-                            style: TextStyle(
-                              color: Color(0xff84d6fe),
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  );
-                },
-              );
-            },
-          ),
-          floatingActionButton: FloatingActionButton(
-            backgroundColor: const Color(0xff84d6fe),
-            onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (_) => const CreatePost()),
-              );
-            },
-            child: const Icon(Icons.add, color: Colors.white),
-          ),
-        );
+        return CommunityFeed();
       case 2:
         return Container(
           color: const Color(0xfff4f9fc),
@@ -1293,22 +742,27 @@ class _HomeScreenState extends State<HomeScreen> {
                   ),
                 ),
                 child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.end,
                   children: [
                     Expanded(
                       child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 14),
-                        decoration: BoxDecoration(
-                          color: Colors.grey.shade100,
-                          borderRadius: BorderRadius.circular(20),
-                        ),
-                        child: TextField(
-                          controller: aictrl,
-                          decoration: const InputDecoration(
-                            hintText: "Ask something...",
-                            border: InputBorder.none,
+                          padding: const EdgeInsets.symmetric(horizontal: 14),
+                          decoration: BoxDecoration(
+                            color: Colors.grey.shade100,
+                            borderRadius: BorderRadius.circular(20),
                           ),
-                        ),
-                      ),
+                          child: TextField(
+                            controller: aictrl,
+                            keyboardType: TextInputType.multiline,
+                            minLines: 1,
+                            maxLines: 5,
+                            textCapitalization: TextCapitalization.sentences,
+                            decoration: const InputDecoration(
+                              hintText: "Ask something...",
+                              border: InputBorder.none,
+                              isDense: true,
+                            ),
+                          )),
                     ),
                     const SizedBox(width: 8),
                     Container(
@@ -1479,8 +933,10 @@ class _HomeScreenState extends State<HomeScreen> {
                         hintText: "Enter your name",
                         onPressed: () async {
                           if (_editNamePrfl) {
-                            await _saveProfile();
+                            final saved = await _saveProfile();
+                            if (!saved) return;
                           }
+
                           setState(() {
                             _editNamePrfl = !_editNamePrfl;
                           });
@@ -1494,13 +950,15 @@ class _HomeScreenState extends State<HomeScreen> {
                         controller: _surnamePrflctrl,
                         hintText: "Enter your surname",
                         onPressed: () async {
-                          if (_editSurnamePrfl) {
-                            await _saveProfile();
-                          }
-                          setState(() {
-                            _editSurnamePrfl = !_editSurnamePrfl;
-                          });
-                        },
+                        if (_editSurnamePrfl) {
+                          final saved = await _saveProfile();
+                          if (!saved) return;
+                        }
+
+                        setState(() {
+                          _editSurnamePrfl = !_editSurnamePrfl;
+                        });
+                      },
                       ),
                       const SizedBox(height: 12),
                       _profileEditCard(
@@ -1512,8 +970,10 @@ class _HomeScreenState extends State<HomeScreen> {
                         keyboardType: TextInputType.number,
                         onPressed: () async {
                           if (_editAgePrfl) {
-                            await _saveProfile();
+                            final saved = await _saveProfile();
+                            if (!saved) return;
                           }
+
                           setState(() {
                             _editAgePrfl = !_editAgePrfl;
                           });
@@ -1529,8 +989,10 @@ class _HomeScreenState extends State<HomeScreen> {
                         maxLines: 4,
                         onPressed: () async {
                           if (_editAbtMePrfl) {
-                            await _saveProfile();
+                            final saved = await _saveProfile();
+                            if (!saved) return;
                           }
+
                           setState(() {
                             _editAbtMePrfl = !_editAbtMePrfl;
                           });

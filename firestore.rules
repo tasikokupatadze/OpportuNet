@@ -1,0 +1,83 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+  
+  function signedIn() {
+  return request.auth != null;
+  }
+  
+  function isOrganizer() {
+  return signedIn() && 
+  get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == "organizer";
+  }
+  
+  match /calendarEvents/{eventId} {
+      allow read: if true;
+      allow create, update, delete: if isOrganizer();
+    }
+  
+  match /exchange/{activityId} {
+      allow read: if true;
+      allow create, update, delete: if isOrganizer();
+    }
+  match /olympiads/{activityId} {
+      allow read: if true;
+      allow create, update, delete: if isOrganizer();
+    }
+  match /volunteering/{activityId} {
+      allow read: if true;
+      allow create, update, delete: if isOrganizer();
+    }
+  
+ match /users/{userId} {
+
+    allow read: if request.auth != null
+                && request.auth.uid == userId;
+
+    allow create: if request.auth != null
+                  && request.auth.uid == userId
+                  && request.resource.data.role == resource.data.role;
+
+    allow update: if request.auth != null
+                  && request.auth.uid == userId
+                  && request.resource.data.role == resource.data.role;
+
+    allow delete: if false;
+  }
+match /posts/{postId} {
+
+  allow read: if true;
+
+  allow create: if request.auth != null
+                && request.resource.data.userId == request.auth.uid;
+
+  allow update: if request.auth != null
+                && request.resource.data.userId == resource.data.userId;
+
+  allow delete: if request.auth != null
+                && resource.data.userId == request.auth.uid;
+
+  match /comments/{commentId} {
+
+    allow read: if true;
+
+    allow create: if request.auth != null
+                  && request.resource.data.userId == request.auth.uid;
+
+    allow update: if request.auth != null
+                  && request.resource.data.userId == resource.data.userId;
+
+    allow delete: if request.auth != null
+                  && resource.data.userId == request.auth.uid;
+  }
+}
+
+    match /messages/{messageId} {
+      allow create: if request.auth != null &&
+        request.resource.data.userId == request.auth.uid;
+
+      allow read, update, delete: if request.auth != null &&
+        resource.data.userId == request.auth.uid;
+    }
+  }
+}

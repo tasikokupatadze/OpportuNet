@@ -26,17 +26,36 @@ Future<UserCredential?> signInWithGoogleWeb() async {
   }
 }
 
-Future<void> createUserDoc(User user) async {
-  await FirebaseFirestore.instance.collection('users').doc(user.uid).set({
-    'email': user.email ?? '',
-    'name': user.displayName?.split(' ').first ?? '',
-    'surname': (user.displayName != null && user.displayName!.contains(' '))
-        ? user.displayName!.split(' ').sublist(1).join(' ')
-        : '',
-    'role': 'user',
-  }, SetOptions(merge: true));
-}
+Future<void> createUserDoc(
+  User user, {
+  String? name,
+  String? surname,
+}) async {
+  final userRef = FirebaseFirestore.instance
+      .collection('users')
+      .doc(user.uid);
 
+  final snapshot = await userRef.get();
+
+  if (!snapshot.exists) {
+    final displayName = user.displayName ?? '';
+    final nameParts = displayName.trim().split(RegExp(r'\s+'));
+
+    await userRef.set({
+      'name': name ?? (nameParts.isNotEmpty ? nameParts.first : ''),
+      'surname': surname ??
+          (nameParts.length > 1
+              ? nameParts.skip(1).join(' ')
+              : ''),
+      'email': user.email ?? '',
+      'role': 'user',
+      'aboutMe': '',
+      'profileImage': '',
+      'age': '',
+      'createdAt': FieldValue.serverTimestamp(),
+    });
+  }
+}
 Future<void> linkGoogle() async {
   final user = FirebaseAuth.instance.currentUser;
 
@@ -48,7 +67,7 @@ Future<void> linkGoogle() async {
     await user.linkWithPopup(provider);
   } catch (e) {
     rethrow;
-  }
+  } 
 }
 
 Future<UserCredential?> signInWithEmailAutoLink(
@@ -85,7 +104,17 @@ Future<UserCredential?> handleGoogleAutoLink() async {
   try {
     final googleProvider = GoogleAuthProvider();
 
-    return await FirebaseAuth.instance.signInWithPopup(googleProvider);
+    final UserCredential userCredential =
+        await FirebaseAuth.instance.signInWithPopup(googleProvider);
+
+    final user = userCredential.user;
+
+    if (user != null) {
+      await createUserDoc(user);
+    }
+
+    return userCredential;
+
   } on FirebaseAuthException catch (e) {
     if (e.code == 'account-exists-with-different-credential') {
       pendingGoogleCredential = e.credential;
@@ -130,11 +159,13 @@ class _LoginScreenState extends State<LoginScreen> {
         ),
         centerTitle: true,
       ),
-      body: Center(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16),
-          child: Column(
-            children: [
+      body: SingleChildScrollView(
+        child: Center(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
               const SizedBox(height: 20),
               TextField(
                 controller: loginemailctrl,
@@ -180,32 +211,104 @@ class _LoginScreenState extends State<LoginScreen> {
 
                   try {
                     final email = loginemailctrl.text.trim();
-                    final password = loginpswrdctrl.text.trim();
+                    final password = loginpswrdctrl.text;
 
                     final userCredential =
-                        await FirebaseAuth.instance.signInWithEmailAndPassword(
-                      email: email,
-                      password: password,
-                    );
+                        await signInWithEmailAutoLink(email, password);
 
-                    final user = userCredential.user;
+                    final user = userCredential?.user;
 
-                    if (user != null) {
-                      await createUserDoc(user);
+                    if (user == null) return;
+
+                    await user.reload();
+
+                    final refreshedUser = FirebaseAuth.instance.currentUser!;
+
+                    final userDoc = await FirebaseFirestore.instance
+                        .collection('users')
+                        .doc(refreshedUser.uid)
+                        .get();
+
+                    final requiresVerification =
+                        userDoc.data()?['requiresEmailVerification'] == true;
+
+                    if (requiresVerification && !refreshedUser.emailVerified) {
+                      await FirebaseAuth.instance.signOut();
+
+                      if (!context.mounted) return;
+
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text(
+                            'Please verify your email before logging in.',
+                          ),
+                        ),
+                      );
+
+                      return;
                     }
+
+                    if (requiresVerification && refreshedUser.emailVerified) {
+                      await userDoc.reference.update({
+                        'requiresEmailVerification': false,
+                      });
+                    }
+
+                    await createUserDoc(refreshedUser);
 
                     if (!context.mounted) return;
 
                     Navigator.pushReplacement(
                       context,
-                      MaterialPageRoute(builder: (_) => const HomeScreen()),
+                      MaterialPageRoute(
+                        builder: (_) => const HomeScreen(),
+                      ),
                     );
+
                   } on FirebaseAuthException catch (e) {
+                    String message;
+
+                    switch (e.code) {
+                      case 'user-not-found':
+                      case 'invalid-credential':
+                        message = 'Incorrect email or password.';
+                        break;
+
+                      case 'wrong-password':
+                        message = 'Incorrect password.';
+                        break;
+
+                      case 'invalid-email':
+                        message = 'Please enter a valid email.';
+                        break;
+
+                      case 'too-many-requests':
+                        message = 'Too many attempts. Please try again later.';
+                        break;
+
+                      case 'need-email-login':
+                        message = 'Please log in using your email and password first.';
+                        break;
+
+                      default:
+                        message = 'Login failed. Please try again.';
+                    }
+
+                    if (!context.mounted) return;
+
                     ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text("Login failed: ${e.code}")),
+                      SnackBar(content: Text(message)),
                     );
-                  } {}
-                },
+
+                  } catch (e) {
+                    if (!context.mounted) return;
+
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Something went wrong. Please try again.'),
+                      ),
+                    );
+                  }},
                 child: const Text(
                   "Login",
                   style: TextStyle(
@@ -213,7 +316,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     fontWeight: FontWeight.bold,
                     fontSize: 20,
                   ),
-                ),
+                )
               ),
               const SizedBox(height: 10),
               TextButton(
@@ -236,34 +339,51 @@ class _LoginScreenState extends State<LoginScreen> {
               ),
               const SizedBox(height: 10),
               ElevatedButton.icon(
-                onPressed: () async {
-                  try {
-                    final user = await handleGoogleAutoLink();
+              onPressed: () async {
+                try {
+                  final userCredential = await handleGoogleAutoLink();
+                  final user = userCredential?.user;
 
-                    if (user != null) {}
+                  if (user == null) return;
 
-                    if (!context.mounted) return;
+                  if (!context.mounted) return;
 
-                    {
-                      Navigator.pushReplacement(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => HomeScreen(),
+                  Navigator.pushReplacement(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => const HomeScreen(),
+                    ),
+                  );
+
+                } on FirebaseAuthException catch (e) {
+                  if (!context.mounted) return;
+
+                  if (e.code == 'need-email-login') {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text(
+                          "Login with email/password first to link your Google account",
                         ),
-                      );
-                    }
-                  } on FirebaseAuthException catch (e) {
-                    if (e.code == 'need-email-login') {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text(
-                            "Login with email/password first to link your Google account",
-                          ),
-                        ),
-                      );
-                    }
+                      ),
+                    );
+                  } else {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Google sign-in failed. Please try again.'),
+                      ),
+                    );
                   }
-                },
+
+                } catch (e) {
+                  if (!context.mounted) return;
+
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Google sign-in failed. Please try again.'),
+                    ),
+                  );
+                }
+              },
                 icon: Image.asset(
                   "assets/google.webp",
                   height: 22,
@@ -300,6 +420,6 @@ class _LoginScreenState extends State<LoginScreen> {
           ),
         ),
       ),
-    );
+    ),);
   }
 }
