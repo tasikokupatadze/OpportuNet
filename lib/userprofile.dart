@@ -39,9 +39,8 @@ class UserProfile extends StatelessWidget {
             );
           }
 
-          final data =
-    snapshot.data!.data() as Map<String, dynamic>? ?? {};
-    
+          final data = snapshot.data!.data() as Map<String, dynamic>? ?? {};
+
           final String name = data["name"] ?? "";
           final String surname = data["surname"] ?? "";
           final String age = (data["age"] ?? "").toString();

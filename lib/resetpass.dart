@@ -18,22 +18,75 @@ class _ResetPassScreenState extends State<ResetPassScreen> {
   }
 
   Future<void> resetPassword() async {
+    final email = _emailresetctrl.text.trim();
+
+    // Check for empty email
+    if (email.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text("Please enter your email address"),
+        ),
+      );
+      return;
+    }
+
+    // Basic email validation
+    final emailRegex = RegExp(
+      r'^[^@\s]+@[^@\s]+\.[^@\s]+$',
+    );
+
+    if (!emailRegex.hasMatch(email)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text("Please enter a valid email address"),
+        ),
+      );
+      return;
+    }
+
     try {
       await FirebaseAuth.instance.sendPasswordResetEmail(
-        email: _emailresetctrl.text.trim(),
+        email: email,
       );
 
       if (!mounted) return;
 
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text("Password reset email sent"),
+          content: Text(
+            "If an account exists for this email, "
+            "you will receive a password reset link.",
+          ),
         ),
       );
     } on FirebaseAuthException catch (e) {
+      if (!mounted) return;
+
+      String message;
+
+      switch (e.code) {
+        case 'invalid-email':
+          message = "Please enter a valid email address.";
+          break;
+        case 'too-many-requests':
+          message = "Too many attempts. Please try again later.";
+          break;
+        case 'network-request-failed':
+          message = "Check your internet connection.";
+          break;
+        default:
+          message = "Unable to process your request. Please try again.";
+      }
+
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(e.message ?? "An error occured"),
+        SnackBar(content: Text(message)),
+      );
+    } catch (e) {
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text("Something went wrong. Please try again."),
         ),
       );
     }

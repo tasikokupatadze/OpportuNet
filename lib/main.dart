@@ -11,11 +11,11 @@ import 'dart:async';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'firebase_options.dart';
-import 'login.dart';
 import 'savedposts.dart';
 import 'authgate.dart';
 import 'home_feed.dart';
 import 'community_feed.dart';
+import 'package:flutter_markdown/flutter_markdown.dart';
 
 ValueNotifier<ThemeMode> themeNotifier = ValueNotifier(ThemeMode.light);
 
@@ -150,75 +150,70 @@ class _HomeScreenState extends State<HomeScreen> {
         _profileImagePath = data['profileImage'] ?? '';
         _isOrganizer = (data['role'] ?? 'user') == 'organizer';
       });
-      } catch (e) {
-        if (!mounted) return;
+    } catch (e) {
+      if (!mounted) return;
 
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text("Failed to load profile: $e")),
-        );
-      }
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Failed to load profile: $e")),
+      );
+    }
   }
 
-    Future<bool> _saveProfile() async {
-      final user = FirebaseAuth.instance.currentUser;
-      if (user == null) return false;
+  Future<bool> _saveProfile() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return false;
 
-      final oldName = _namePrflctrl.text.trim();
-      final oldSurname = _surnamePrflctrl.text.trim();
+    final oldName = _namePrflctrl.text.trim();
+    final oldSurname = _surnamePrflctrl.text.trim();
 
-      final newUsername = "$oldName $oldSurname".trim();
+    final newUsername = "$oldName $oldSurname".trim();
 
-      try {
-        await FirebaseFirestore.instance
-            .collection('users')
-            .doc(user.uid)
-            .set({
-          'name': oldName,
-          'surname': oldSurname,
-          'age': _agePrflctrl.text.trim(),
-          'aboutMe': _abtMePrflctrl.text.trim(),
-          'profileImage': _profileImagePath ?? '',
-          'email': user.email ?? '',
-        }, SetOptions(merge: true));
+    try {
+      await FirebaseFirestore.instance.collection('users').doc(user.uid).set({
+        'name': oldName,
+        'surname': oldSurname,
+        'age': _agePrflctrl.text.trim(),
+        'aboutMe': _abtMePrflctrl.text.trim(),
+        'profileImage': _profileImagePath ?? '',
+        'email': user.email ?? '',
+      }, SetOptions(merge: true));
 
-        // Keep the username on existing posts in sync.
-        final posts = await FirebaseFirestore.instance
-            .collection('posts')
-            .where('userId', isEqualTo: user.uid)
-            .get();
+      // Keep the username on existing posts in sync.
+      final posts = await FirebaseFirestore.instance
+          .collection('posts')
+          .where('userId', isEqualTo: user.uid)
+          .get();
 
-        for (var i = 0; i < posts.docs.length; i += 450) {
-          final batch = FirebaseFirestore.instance.batch();
-          final end = (i + 450 < posts.docs.length)
-              ? i + 450
-              : posts.docs.length;
+      for (var i = 0; i < posts.docs.length; i += 450) {
+        final batch = FirebaseFirestore.instance.batch();
+        final end = (i + 450 < posts.docs.length) ? i + 450 : posts.docs.length;
 
-          for (final post in posts.docs.sublist(i, end)) {
-            batch.update(post.reference, {
-              'username': newUsername.isEmpty ? 'user' : newUsername,
-            });
-          }
-
-          await batch.commit();
+        for (final post in posts.docs.sublist(i, end)) {
+          batch.update(post.reference, {
+            'username': newUsername.isEmpty ? 'user' : newUsername,
+          });
         }
 
-        if (!mounted) return true;
-
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Profile updated successfully')),
-        );
-
-        return true;
-      } catch (e) {
-        if (!mounted) return false;
-
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to save profile: $e')),
-        );
-
-        return false;
+        await batch.commit();
       }
+
+      if (!mounted) return true;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Profile updated successfully')),
+      );
+
+      return true;
+    } catch (e) {
+      if (!mounted) return false;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Failed to save profile: $e')),
+      );
+
+      return false;
     }
+  }
 
   @override
   void dispose() {
@@ -719,10 +714,43 @@ class _HomeScreenState extends State<HomeScreen> {
                                     border:
                                         Border.all(color: Colors.grey.shade300),
                                   ),
-                                  child: Text(
-                                    doc["aiResponse"] ?? "",
-                                    style:
-                                        const TextStyle(color: Colors.black87),
+                                  child: MarkdownBody(
+                                    data: aiResponse.toString(),
+                                    styleSheet: MarkdownStyleSheet(
+                                      p: const TextStyle(
+                                        color: Colors.black87,
+                                        fontSize: 14,
+                                        height: 1.5,
+                                      ),
+                                      h1: const TextStyle(
+                                        color: Colors.black87,
+                                        fontSize: 22,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                      h2: const TextStyle(
+                                        color: Colors.black87,
+                                        fontSize: 19,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                      h3: const TextStyle(
+                                        color: Colors.black87,
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                      listBullet: const TextStyle(
+                                        color: Colors.black87,
+                                        fontSize: 14,
+                                      ),
+                                      code: const TextStyle(
+                                        color: Color(0xff2b88b4),
+                                        backgroundColor: Color(0xffeef6fa),
+                                        fontSize: 13,
+                                      ),
+                                      codeblockDecoration: BoxDecoration(
+                                        color: const Color(0xffeef6fa),
+                                        borderRadius: BorderRadius.circular(8),
+                                      ),
+                                    ),
                                   ),
                                 ),
                               ),
@@ -898,16 +926,6 @@ class _HomeScreenState extends State<HomeScreen> {
                                     subtitle: "Leave account",
                                     onTap: () async {
                                       await FirebaseAuth.instance.signOut();
-
-                                      if (!mounted) return;
-
-                                      Navigator.pushAndRemoveUntil(
-                                        context,
-                                        MaterialPageRoute(
-                                          builder: (_) => const LoginScreen(),
-                                        ),
-                                        (route) => false,
-                                      );
                                     },
                                   ),
                                 ),
@@ -950,15 +968,15 @@ class _HomeScreenState extends State<HomeScreen> {
                         controller: _surnamePrflctrl,
                         hintText: "Enter your surname",
                         onPressed: () async {
-                        if (_editSurnamePrfl) {
-                          final saved = await _saveProfile();
-                          if (!saved) return;
-                        }
+                          if (_editSurnamePrfl) {
+                            final saved = await _saveProfile();
+                            if (!saved) return;
+                          }
 
-                        setState(() {
-                          _editSurnamePrfl = !_editSurnamePrfl;
-                        });
-                      },
+                          setState(() {
+                            _editSurnamePrfl = !_editSurnamePrfl;
+                          });
+                        },
                       ),
                       const SizedBox(height: 12),
                       _profileEditCard(
@@ -1078,39 +1096,51 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        automaticallyImplyLeading: false,
-        title: Image.asset(
-          'assets/opportunet1.png',
-          height: 60,
+    return PopScope(
+      canPop: _selectedIndex == 0,
+      onPopInvokedWithResult: (didPop, result) {
+        if (didPop) return;
+
+        if (_selectedIndex != 0) {
+          setState(() {
+            _selectedIndex = 0;
+          });
+        }
+      },
+      child: Scaffold(
+        appBar: AppBar(
+          automaticallyImplyLeading: false,
+          title: Image.asset(
+            'assets/opportunet1.png',
+            height: 60,
+          ),
+          centerTitle: true,
         ),
-        centerTitle: true,
-      ),
-      body: _getPage(_selectedIndex),
-      bottomNavigationBar: BottomNavigationBar(
-        currentIndex: _selectedIndex,
-        onTap: _onItemTapped,
-        selectedItemColor: const Color(0xff84d6fe),
-        unselectedItemColor: Colors.grey,
-        items: const [
-          BottomNavigationBarItem(
-            icon: Icon(Icons.home),
-            label: "Home",
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.chat),
-            label: "Posts feed",
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.smart_toy),
-            label: "AI",
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.person),
-            label: "Profile",
-          ),
-        ],
+        body: _getPage(_selectedIndex),
+        bottomNavigationBar: BottomNavigationBar(
+          currentIndex: _selectedIndex,
+          onTap: _onItemTapped,
+          selectedItemColor: const Color(0xff84d6fe),
+          unselectedItemColor: Colors.grey,
+          items: const [
+            BottomNavigationBarItem(
+              icon: Icon(Icons.home),
+              label: "Home",
+            ),
+            BottomNavigationBarItem(
+              icon: Icon(Icons.chat),
+              label: "Posts feed",
+            ),
+            BottomNavigationBarItem(
+              icon: Icon(Icons.smart_toy),
+              label: "AI",
+            ),
+            BottomNavigationBarItem(
+              icon: Icon(Icons.person),
+              label: "Profile",
+            ),
+          ],
+        ),
       ),
     );
   }

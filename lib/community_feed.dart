@@ -1,5 +1,3 @@
-
-
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
@@ -61,10 +59,10 @@ class _CommunityFeedState extends State<CommunityFeed> {
     final list = docs.where((d) {
       final data = d.data() as Map<String, dynamic>;
       final cat = (data["category"] ?? "General") as String;
-      if (_category != "All" && cat.toLowerCase() != _category.toLowerCase())
-        return false;
+      if (_category != "All" && cat.toLowerCase() != _category.toLowerCase()) {
+        return false;}
       if (_sort == FeedSort.saved &&
-          !(List.from(data["savedBy"] ?? []).contains(uid))) return false;
+          !(List.from(data["savedBy"] ?? []).contains(uid))) {return false;}
       if (q.isNotEmpty) {
         final hay =
             "${data["text"] ?? ""} ${data["username"] ?? ""}".toLowerCase();
@@ -362,14 +360,26 @@ class PostCard extends StatelessWidget {
   const PostCard({super.key, required this.post, required this.isOrganizer});
 
   void _openProfile(BuildContext context, String uid) {
+    if (uid.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text("This post doesn't have a valid user profile."),
+        ),
+      );
+      return;
+    }
+
     Navigator.push(
-        context, MaterialPageRoute(builder: (_) => UserProfile(uid: uid)));
+      context,
+      MaterialPageRoute(builder: (_) => UserProfile(uid: uid)),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
     final data = post.data() as Map<String, dynamic>;
     final String userId = data["userId"] ?? "";
+
     final String username = data["username"] ?? "user";
     final String text = data["text"] ?? "";
     final String imageUrl = data["imageUrl"] ?? "";

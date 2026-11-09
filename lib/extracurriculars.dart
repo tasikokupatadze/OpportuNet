@@ -7,7 +7,6 @@ import 'package:image_picker/image_picker.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/foundation.dart';
 
-
 class AddActivityScreen extends StatefulWidget {
   const AddActivityScreen({super.key});
 
@@ -22,6 +21,29 @@ class _AddActivityScreenState extends State<AddActivityScreen> {
   final _websitectrl = TextEditingController();
   final _agectrl = TextEditingController();
   final _costctrl = TextEditingController();
+  String? _selectedSubject;
+
+  final List<String> _subjects = [
+    "Maths",
+    "Physics",
+    "Chemistry",
+    "Biology",
+    "Robotics",
+    "Informatics",
+    "Programming",
+    "Astrophysics",
+    "Linguistics",
+    "English",
+    "Economics",
+    "Other",
+  ];
+  String _selectedCategory = "olympiads";
+
+  final Map<String, String> _categories = {
+    "olympiads": "Olympiads",
+    "volunteering": "Volunteering",
+    "exchange": "Exchange Programs",
+  };
 
   File? _selectedImage;
   Uint8List? _webImage;
@@ -75,8 +97,13 @@ class _AddActivityScreenState extends State<AddActivityScreen> {
     final website = _websitectrl.text.trim();
     final age = _agectrl.text.trim();
     final cost = _costctrl.text.trim();
+    final subject = _selectedSubject;
 
-    if (title.isEmpty || description.isEmpty || website.isEmpty) {
+    if (title.isEmpty ||
+        description.isEmpty ||
+        website.isEmpty ||
+        subject == null ||
+        cost.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text("Please fill in all required fields."),
@@ -111,10 +138,11 @@ class _AddActivityScreenState extends State<AddActivityScreen> {
         );
         return;
       }
-      await FirebaseFirestore.instance.collection("extracurriculars").add({
+      await FirebaseFirestore.instance.collection(_selectedCategory).add({
         "title": title,
         "description": description,
         "website": website,
+        "subject": subject.toLowerCase(),
         "ageRequirements": age,
         "cost": cost,
         "imageUrl": imageUrl,
@@ -219,6 +247,28 @@ class _AddActivityScreenState extends State<AddActivityScreen> {
                 border: OutlineInputBorder(),
               ),
             ),
+            const SizedBox(height: 16),
+
+            DropdownButtonFormField<String>(
+              initialValue: _selectedCategory,
+              decoration: const InputDecoration(
+                labelText: "Category",
+                border: OutlineInputBorder(),
+              ),
+              items: _categories.entries.map((entry) {
+                return DropdownMenuItem<String>(
+                  value: entry.key,
+                  child: Text(entry.value),
+                );
+              }).toList(),
+              onChanged: (value) {
+                if (value != null) {
+                  setState(() {
+                    _selectedCategory = value;
+                  });
+                }
+              },
+            ),
 
             const SizedBox(height: 16),
 
@@ -238,6 +288,26 @@ class _AddActivityScreenState extends State<AddActivityScreen> {
                 labelText: "Age Requirements",
                 border: OutlineInputBorder(),
               ),
+            ),
+            const SizedBox(height: 16),
+
+            DropdownButtonFormField<String>(
+              initialValue: _selectedSubject,
+              decoration: const InputDecoration(
+                labelText: "Subject",
+                border: OutlineInputBorder(),
+              ),
+              items: _subjects.map((subject) {
+                return DropdownMenuItem(
+                  value: subject,
+                  child: Text(subject),
+                );
+              }).toList(),
+              onChanged: (value) {
+                setState(() {
+                  _selectedSubject = value;
+                });
+              },
             ),
 
             const SizedBox(height: 16),

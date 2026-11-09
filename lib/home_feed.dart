@@ -5,6 +5,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'calendar.dart';
 import 'activitydetails.dart';
 import 'roadmaps.dart';
+import 'extracurriculars.dart';
 
 const Map<String, (String, IconData)> kCategories = {
   "olympiads": ("Olympiads", Icons.emoji_events_rounded),
@@ -86,7 +87,25 @@ String _str(Map<String, dynamic> d, List<String> keys) {
   return "";
 }
 
-String _subject(Map<String, dynamic> d) => _str(d, ["subject", "field"]);
+String _subject(Map<String, dynamic> d) {
+  final value = _str(d, ["subject", "field"]);
+  final normalized = value.toLowerCase().trim();
+
+  const aliases = {
+    "math": "maths",
+    "mathematics": "maths",
+    "math olympiad": "maths",
+    "physics olympiad": "physics",
+    "chemistry olympiad": "chemistry",
+    "biology olympiad": "biology",
+    "computer science": "informatics",
+    "informatics olympiad": "informatics",
+    "robotics olympiad": "robotics"
+  };
+
+  return aliases[normalized] ?? normalized;
+}
+
 String _duration(Map<String, dynamic> d) =>
     _str(d, ["duration", "length", "programDuration"]);
 
@@ -158,27 +177,47 @@ class _HomeFeedState extends State<HomeFeed> {
   }
 
   bool _matches(Map<String, dynamic> d) {
-    final title = (d["title"] ?? "").toString();
-    final desc = (d["description"] ?? "").toString();
     final cat = (d[kCategoryField] ?? "").toString();
     final cost = (d["cost"] ?? "").toString();
     final age = (d["ageRequirements"] ?? d["age"] ?? "").toString();
     final subject = _subject(d);
-    final duration = _duration(d);
 
-    if (_query.isNotEmpty &&
-        !("$title $desc $subject $duration"
-            .toLowerCase()
-            .contains(_query.toLowerCase()))) {
+    final searchableText = [
+      d["title"],
+      d["description"],
+      d["subject"],
+      d["field"],
+      d["duration"],
+      d["length"],
+      d["programDuration"],
+      d["ageRequirements"],
+      d["age"],
+      d["cost"],
+      d["location"],
+      d["country"],
+      d["eligibility"],
+      d["requirements"],
+    ].where((v) => v != null).join(" ").toLowerCase();
+
+    final normalizedQuery =
+        _query.toLowerCase().trim().replaceAll(RegExp(r'\s+'), ' ');
+
+    if (normalizedQuery.isNotEmpty &&
+        !searchableText.contains(normalizedQuery)) {
       return false;
     }
+
     if (_categories.isNotEmpty && !_categories.contains(cat)) return false;
-    if (_subjects.isNotEmpty && !_subjects.contains(subject.toLowerCase())) {
+
+    if (_subjects.isNotEmpty && !_subjects.contains(subject)) {
       return false;
     }
+
     if (_cost == CostFilter.free && !_isFree(cost)) return false;
     if (_cost == CostFilter.paid && _isFree(cost)) return false;
+
     if (_myAge != null && !_ageFits(age, _myAge!)) return false;
+
     return true;
   }
 
@@ -309,62 +348,108 @@ class _HomeFeedState extends State<HomeFeed> {
   Widget _topButtons() {
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 14, 16, 8),
-      child: Row(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Expanded(
-            child: SizedBox(
+          Row(
+            children: [
+              Expanded(
+                child: SizedBox(
+                  height: 45,
+                  child: ElevatedButton.icon(
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: _brandDark,
+                      padding: const EdgeInsets.symmetric(horizontal: 8),
+                      side: const BorderSide(color: _brand),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                    ),
+                    onPressed: () => Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) =>
+                            CalendarScreen(isOrganizer: widget.isOrganizer),
+                      ),
+                    ),
+                    icon: const Icon(Icons.calendar_month, size: 20),
+                    label: const Text(
+                      "Academic Calendar",
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: SizedBox(
+                  height: 45,
+                  child: OutlinedButton.icon(
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: _brandDark,
+                      padding: const EdgeInsets.symmetric(horizontal: 8),
+                      side: const BorderSide(color: _brand),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                    ),
+                    onPressed: () => Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => const RoadmapScreen(),
+                      ),
+                    ),
+                    icon: const Icon(Icons.route_rounded, size: 20),
+                    label: const Text(
+                      "Roadmaps",
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+
+          // Only organizers can see this button.
+          if (widget.isOrganizer) ...[
+            const SizedBox(height: 10),
+            SizedBox(
               height: 45,
               child: ElevatedButton.icon(
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => const AddActivityScreen(),
+                    ),
+                  );
+                },
+                icon: const Icon(Icons.add),
+                label: const Text(
+                  "Add Extracurricular",
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 15,
+                  ),
+                ),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: _brand,
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(horizontal: 8),
+                  foregroundColor: Colors.black87,
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(16),
                   ),
                 ),
-                onPressed: () => Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) =>
-                        CalendarScreen(isOrganizer: widget.isOrganizer),
-                  ),
-                ),
-                icon: const Icon(Icons.calendar_month, size: 20),
-                label: const Text(
-                  "Academic Calendar",
-                  textAlign: TextAlign.center,
-                  style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
-                ),
               ),
             ),
-          ),
-          const SizedBox(width: 10),
-          Expanded(
-            child: SizedBox(
-              height: 45,
-              child: OutlinedButton.icon(
-                style: OutlinedButton.styleFrom(
-                  foregroundColor: _brandDark,
-                  padding: const EdgeInsets.symmetric(horizontal: 8),
-                  side: const BorderSide(color: _brand),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(16),
-                  ),
-                ),
-                onPressed: () => Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (_) => const RoadmapScreen()),
-                ),
-                icon: const Icon(Icons.route_rounded, size: 20),
-                label: const Text(
-                  "Roadmaps",
-                  textAlign: TextAlign.center,
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                ),
-              ),
-            ),
-          ),
+          ],
         ],
       ),
     );
@@ -665,19 +750,38 @@ class _HomeFeedState extends State<HomeFeed> {
                     onSelectionChanged: (s) => update(() => _cost = s.first),
                   ),
                   const SizedBox(height: 20),
+
                   Row(
                     children: [
                       const Text("My age", style: h),
                       const Spacer(),
-                      Text(_myAge == null ? "Any" : "$_myAge"),
+                      Text(
+                        _myAge == null ? "Any age" : "$_myAge years",
+                        style: const TextStyle(fontWeight: FontWeight.w600),
+                      ),
                     ],
                   ),
+                  const SizedBox(height: 8),
+
+                  Wrap(
+                    spacing: 8,
+                    children: [
+                      ChoiceChip(
+                        label: const Text("Any age"),
+                        selected: _myAge == null,
+                        showCheckmark: false,
+                        selectedColor: _brand,
+                        onSelected: (_) => update(() => _myAge = null),
+                      ),
+                    ],
+                  ),
+
                   Slider(
                     value: (_myAge ?? 12).toDouble(),
                     min: 12,
                     max: 20,
                     divisions: 8,
-                    label: _myAge == null ? "Any" : "$_myAge",
+                    label: _myAge == null ? "Any age" : "$_myAge",
                     activeColor: _brandDark,
                     onChanged: (v) => update(() => _myAge = v.round()),
                   ),
