@@ -13,7 +13,6 @@ class _RoadmapScreenState extends State<RoadmapScreen>
 
   static const Color brand = Color(0xff84d6fe);
   static const Color brandDark = Color(0xff2b88b4);
-  static const Color background = Color(0xfff5f9fc);
 
   @override
   void initState() {
@@ -106,9 +105,7 @@ class _RoadmapScreenState extends State<RoadmapScreen>
       'grade': '12th Grade',
       'subtitle':
           'Complete your applications and make your university decision.',
-      'private': [
-        'Take challenging classes',
-      ],
+      'private': ['Take challenging classes'],
       'public': [
         'Decide if you will apply Early Decision or Early Action',
         'Stay ahead of your application deadlines',
@@ -137,12 +134,12 @@ class _RoadmapScreenState extends State<RoadmapScreen>
     required List<String> items,
   }) {
     return Container(
-      margin: const EdgeInsets.only(bottom: 16),
-      padding: const EdgeInsets.all(18),
+      margin: EdgeInsets.only(bottom: 16),
+      padding: EdgeInsets.all(18),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Theme.of(context).colorScheme.surface,
         borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: const Color(0xffe7eef4)),
+        border: Border.all(color: Color(0xffe7eef4)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -150,28 +147,29 @@ class _RoadmapScreenState extends State<RoadmapScreen>
           Row(
             children: [
               Container(
-                padding: const EdgeInsets.all(9),
+                padding: EdgeInsets.all(9),
                 decoration: BoxDecoration(
-                  color: brand..withValues(alpha: 0.18),
+                  color: brand.withValues(alpha: 0.18),
                   borderRadius: BorderRadius.circular(11),
                 ),
                 child: Icon(icon, color: brandDark, size: 21),
               ),
-              const SizedBox(width: 12),
-              Text(
+              SizedBox(width: 12),
+              Expanded(
+                  child: Text(
                 title,
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 17,
                   fontWeight: FontWeight.bold,
-                  color: Color(0xff263746),
+                  color: Theme.of(context).colorScheme.onSurface,
                 ),
-              ),
+              )),
             ],
           ),
-          const SizedBox(height: 17),
+          SizedBox(height: 17),
           ...items.asMap().entries.map((entry) {
             return Padding(
-              padding: const EdgeInsets.only(bottom: 13),
+              padding: EdgeInsets.only(bottom: 13),
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -180,26 +178,26 @@ class _RoadmapScreenState extends State<RoadmapScreen>
                     height: 23,
                     alignment: Alignment.center,
                     decoration: BoxDecoration(
-                      color: brand..withValues(alpha: 0.2),
+                      color: brand.withValues(alpha: 0.2),
                       shape: BoxShape.circle,
                     ),
                     child: Text(
                       '${entry.key + 1}',
-                      style: const TextStyle(
+                      style: TextStyle(
                         color: brandDark,
                         fontSize: 11,
                         fontWeight: FontWeight.bold,
                       ),
                     ),
                   ),
-                  const SizedBox(width: 11),
+                  SizedBox(width: 11),
                   Expanded(
                     child: Text(
                       entry.value,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 14,
                         height: 1.5,
-                        color: Color(0xff455563),
+                        color: Theme.of(context).colorScheme.onSurface,
                       ),
                     ),
                   ),
@@ -215,15 +213,15 @@ class _RoadmapScreenState extends State<RoadmapScreen>
   Widget _buildGradePage(Map<String, dynamic> roadmap) {
     return SingleChildScrollView(
       key: PageStorageKey(roadmap['grade']),
-      padding: const EdgeInsets.fromLTRB(16, 18, 16, 28),
+      padding: EdgeInsets.fromLTRB(16, 18, 16, 28),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Container(
             width: double.infinity,
-            padding: const EdgeInsets.all(22),
+            padding: EdgeInsets.all(22),
             decoration: BoxDecoration(
-              gradient: const LinearGradient(
+              gradient: LinearGradient(
                 colors: [brand, Color(0xffb4e5ff)],
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
@@ -235,16 +233,16 @@ class _RoadmapScreenState extends State<RoadmapScreen>
               children: [
                 Text(
                   roadmap['grade'],
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 26,
                     fontWeight: FontWeight.bold,
                     color: Color(0xff17394e),
                   ),
                 ),
-                const SizedBox(height: 8),
+                SizedBox(height: 8),
                 Text(
                   roadmap['subtitle'],
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 14,
                     height: 1.5,
                     color: Color(0xff244c63),
@@ -253,7 +251,7 @@ class _RoadmapScreenState extends State<RoadmapScreen>
               ],
             ),
           ),
-          const SizedBox(height: 22),
+          SizedBox(height: 22),
           _buildCategory(
             title: 'Private Schools',
             icon: Icons.school_outlined,
@@ -277,24 +275,21 @@ class _RoadmapScreenState extends State<RoadmapScreen>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: background,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
-        backgroundColor: Colors.white,
+        backgroundColor: Theme.of(context).colorScheme.surface,
         elevation: 0,
         centerTitle: true,
-        title: Image.asset(
-          'assets/opportunet1.png',
-          height: 55,
-        ),
+        title: Image.asset('assets/opportunet1.png', height: 55),
         bottom: PreferredSize(
-          preferredSize: const Size.fromHeight(58),
+          preferredSize: Size.fromHeight(58),
           child: Container(
-            color: Colors.white,
-            padding: const EdgeInsets.fromLTRB(12, 0, 12, 10),
+            color: Theme.of(context).colorScheme.surface,
+            padding: EdgeInsets.fromLTRB(12, 0, 12, 10),
             child: Container(
               height: 46,
               decoration: BoxDecoration(
-                color: background,
+                color: Theme.of(context).scaffoldBackgroundColor,
                 borderRadius: BorderRadius.circular(14),
               ),
               child: TabBar(
@@ -305,13 +300,13 @@ class _RoadmapScreenState extends State<RoadmapScreen>
                   color: brand,
                   borderRadius: BorderRadius.circular(12),
                 ),
-                labelColor: const Color(0xff17394e),
+                labelColor: Color(0xff17394e),
                 unselectedLabelColor: Colors.grey.shade600,
-                labelStyle: const TextStyle(
+                labelStyle: TextStyle(
                   fontSize: 14,
                   fontWeight: FontWeight.bold,
                 ),
-                tabs: const [
+                tabs: [
                   Tab(text: '9th'),
                   Tab(text: '10th'),
                   Tab(text: '11th'),
