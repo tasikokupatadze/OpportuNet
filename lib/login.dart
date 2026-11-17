@@ -1,9 +1,13 @@
+import 'app_ui.dart';
+
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+
 import 'signup.dart';
 import 'main.dart';
 import 'resetpass.dart';
+
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:flutter/foundation.dart';
 
@@ -13,8 +17,9 @@ Future<void>? _googleSignInInitialization;
 Future<UserCredential?> signInWithGoogleWeb() async {
   try {
     final provider = GoogleAuthProvider();
-    final userCredential =
-        await FirebaseAuth.instance.signInWithPopup(provider);
+    final userCredential = await FirebaseAuth.instance.signInWithPopup(
+      provider,
+    );
 
     final user = userCredential.user;
     if (user != null) {
@@ -27,11 +32,7 @@ Future<UserCredential?> signInWithGoogleWeb() async {
   }
 }
 
-Future<void> createUserDoc(
-  User user, {
-  String? name,
-  String? surname,
-}) async {
+Future<void> createUserDoc(User user, {String? name, String? surname}) async {
   final userRef = FirebaseFirestore.instance.collection('users').doc(user.uid);
 
   final snapshot = await userRef.get();
@@ -81,11 +82,8 @@ Future<UserCredential?> signInWithEmailAutoLink(
   String password,
 ) async {
   try {
-    final userCredential =
-        await FirebaseAuth.instance.signInWithEmailAndPassword(
-      email: email,
-      password: password,
-    );
+    final userCredential = await FirebaseAuth.instance
+        .signInWithEmailAndPassword(email: email, password: password);
 
     final user = userCredential.user;
 
@@ -132,12 +130,11 @@ Future<UserCredential?> handleGoogleAutoLink() async {
         );
       }
 
-      final credential = GoogleAuthProvider.credential(
-        idToken: idToken,
-      );
+      final credential = GoogleAuthProvider.credential(idToken: idToken);
 
-      userCredential =
-          await FirebaseAuth.instance.signInWithCredential(credential);
+      userCredential = await FirebaseAuth.instance.signInWithCredential(
+        credential,
+      );
     }
 
     final user = userCredential.user;
@@ -169,6 +166,9 @@ class LoginScreen extends StatefulWidget {
 
 class _LoginScreenState extends State<LoginScreen> {
   bool _isPswrdHidden = true;
+  bool _isSigningIn = false;
+  bool _isGoogleSigningIn = false;
+  bool get _isBusy => _isSigningIn || _isGoogleSigningIn;
 
   final TextEditingController loginemailctrl = TextEditingController();
   final TextEditingController loginpswrdctrl = TextEditingController();
@@ -234,10 +234,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       ),
                       focusedBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(14),
-                        borderSide: const BorderSide(
-                          color: brand,
-                          width: 2,
-                        ),
+                        borderSide: const BorderSide(color: brand, width: 2),
                       ),
                     ),
                   ),
@@ -280,10 +277,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       ),
                       focusedBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(14),
-                        borderSide: const BorderSide(
-                          color: brand,
-                          width: 2,
-                        ),
+                        borderSide: const BorderSide(color: brand, width: 2),
                       ),
                     ),
                   ),
@@ -292,14 +286,16 @@ class _LoginScreenState extends State<LoginScreen> {
                   Align(
                     alignment: Alignment.centerRight,
                     child: TextButton(
-                      onPressed: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) => const ResetPassScreen(),
-                          ),
-                        );
-                      },
+                      onPressed: _isBusy
+                          ? null
+                          : () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (_) => const ResetPassScreen(),
+                                ),
+                              );
+                            },
                       child: const Text(
                         "Forgot password?",
                         style: TextStyle(
@@ -316,132 +312,143 @@ class _LoginScreenState extends State<LoginScreen> {
                   SizedBox(
                     height: 52,
                     child: ElevatedButton(
-                      onPressed: () async {
-                        if (loginemailctrl.text.trim().isEmpty ||
-                            loginpswrdctrl.text.isEmpty) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text("Please fill all fields"),
-                            ),
-                          );
-                          return;
-                        }
+                      onPressed: _isBusy
+                          ? null
+                          : () async {
+                              if (loginemailctrl.text.trim().isEmpty ||
+                                  loginpswrdctrl.text.isEmpty) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                    content: Text("Please fill all fields"),
+                                  ),
+                                );
+                                return;
+                              }
 
-                        try {
-                          final email = loginemailctrl.text.trim();
-                          final password = loginpswrdctrl.text;
+                              setState(() => _isSigningIn = true);
+                              try {
+                                final email = loginemailctrl.text.trim();
+                                final password = loginpswrdctrl.text;
 
-                          final userCredential =
-                              await signInWithEmailAutoLink(email, password);
+                                final userCredential =
+                                    await signInWithEmailAutoLink(
+                                  email,
+                                  password,
+                                );
 
-                          final user = userCredential?.user;
-                          if (user == null) return;
+                                final user = userCredential?.user;
+                                if (user == null) return;
 
-                          await user.reload();
+                                await user.reload();
 
-                          final refreshedUser =
-                              FirebaseAuth.instance.currentUser!;
+                                final refreshedUser =
+                                    FirebaseAuth.instance.currentUser!;
 
-                          final userDoc = await FirebaseFirestore.instance
-                              .collection('users')
-                              .doc(refreshedUser.uid)
-                              .get();
+                                final userDoc = await FirebaseFirestore.instance
+                                    .collection('users')
+                                    .doc(refreshedUser.uid)
+                                    .get();
 
-                          final requiresVerification =
-                              userDoc.data()?['requiresEmailVerification'] ==
-                                  true;
+                                final requiresVerification = userDoc
+                                        .data()?['requiresEmailVerification'] ==
+                                    true;
 
-                          if (requiresVerification &&
-                              !refreshedUser.emailVerified) {
-                            await FirebaseAuth.instance.signOut();
+                                if (requiresVerification &&
+                                    !refreshedUser.emailVerified) {
+                                  await FirebaseAuth.instance.signOut();
 
-                            if (!context.mounted) return;
+                                  if (!context.mounted) return;
 
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text(
-                                  'Please verify your email before logging in.',
-                                ),
-                              ),
-                            );
-                            return;
-                          }
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(
+                                      content: Text(
+                                        'Please verify your email before logging in.',
+                                      ),
+                                    ),
+                                  );
+                                  return;
+                                }
 
-                          if (requiresVerification &&
-                              refreshedUser.emailVerified) {
-                            await userDoc.reference.update({
-                              'requiresEmailVerification': false,
-                            });
-                          }
+                                if (requiresVerification &&
+                                    refreshedUser.emailVerified) {
+                                  await userDoc.reference.update({
+                                    'requiresEmailVerification': false,
+                                  });
+                                }
 
-                          await createUserDoc(refreshedUser);
+                                await createUserDoc(refreshedUser);
 
-                          if (!context.mounted) return;
+                                if (!context.mounted) return;
 
-                          Navigator.pushReplacement(
-                            context,
-                            MaterialPageRoute(
-                              builder: (_) => const HomeScreen(),
-                            ),
-                          );
-                        } on FirebaseAuthException catch (e) {
-                          String message;
+                                Navigator.pushReplacement(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (_) => const HomeScreen(),
+                                  ),
+                                );
+                              } on FirebaseAuthException catch (e) {
+                                String message;
 
-                          switch (e.code) {
-                            case 'user-not-found':
-                            case 'invalid-credential':
-                              message = 'Incorrect email or password.';
-                              break;
-                            case 'wrong-password':
-                              message = 'Incorrect password.';
-                              break;
-                            case 'invalid-email':
-                              message = 'Please enter a valid email.';
-                              break;
-                            case 'too-many-requests':
-                              message =
-                                  'Too many attempts. Please try again later.';
-                              break;
-                            case 'need-email-login':
-                              message =
-                                  'Please log in using your email and password first.';
-                              break;
-                            default:
-                              message = 'Login failed. Please try again.';
-                          }
+                                switch (e.code) {
+                                  case 'user-not-found':
+                                  case 'invalid-credential':
+                                    message = 'Incorrect email or password.';
+                                    break;
+                                  case 'wrong-password':
+                                    message = 'Incorrect password.';
+                                    break;
+                                  case 'invalid-email':
+                                    message = 'Please enter a valid email.';
+                                    break;
+                                  case 'too-many-requests':
+                                    message =
+                                        'Too many attempts. Please try again later.';
+                                    break;
+                                  case 'need-email-login':
+                                    message =
+                                        'Please log in using your email and password first.';
+                                    break;
+                                  default:
+                                    message = 'Login failed. Please try again.';
+                                }
 
-                          if (!context.mounted) return;
+                                if (!context.mounted) return;
 
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(content: Text(message)),
-                          );
-                        } catch (e) {
-                          if (!context.mounted) return;
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(content: Text(message)),
+                                );
+                              } catch (e) {
+                                if (!context.mounted) return;
 
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text(
-                                'Something went wrong. Please try again.',
-                              ),
-                            ),
-                          );
-                        }
-                      },
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                    content: Text(
+                                      'Something went wrong. Please try again.',
+                                    ),
+                                  ),
+                                );
+                              } finally {
+                                if (mounted)
+                                  {setState(() => _isSigningIn = false);}
+                              }
+                            },
                       style: ElevatedButton.styleFrom(
                         backgroundColor: brand,
-                        foregroundColor: Colors.white,
+                        foregroundColor: brandInk,
                         elevation: 0,
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(14),
                         ),
                       ),
-                      child: const Text(
-                        "Login",
-                        style: TextStyle(
-                          fontSize: 17,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
+                      child: _isSigningIn
+                          ? const BusyIndicator()
+                          : const Text(
+                              "Login",
+                              style: TextStyle(
+                                fontSize: 17,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
                     ),
                   ),
 
@@ -480,40 +487,53 @@ class _LoginScreenState extends State<LoginScreen> {
                   SizedBox(
                     height: 52,
                     child: OutlinedButton.icon(
-                      onPressed: () async {
-                        try {
-                          final userCredential = await handleGoogleAutoLink();
-                          final user = userCredential?.user;
-
-                          if (user == null) return;
-                          if (!context.mounted) return;
-
-                          Navigator.pushReplacement(
-                            context,
-                            MaterialPageRoute(
-                              builder: (_) => const HomeScreen(),
-                            ),
-                          );
-                        } on FirebaseAuthException catch (e) {
-                          debugPrint('GOOGLE AUTH: ${e.code}: ${e.message}');
-                          if (!context.mounted) return;
-
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content: Text(
-                                e.code == 'need-email-login'
-                                    ? 'Log in with email/password first to link Google.'
-                                    : '${e.code}: ${e.message}',
-                              ),
-                            ),
-                          );
-                        }
-                      },
-                      icon: Image.asset(
-                        "assets/google.webp",
-                        height: 22,
-                      ),
-                      label: const Text("Continue with Google"),
+                      onPressed: _isBusy
+                          ? null
+                          : () async {
+                              setState(() => _isGoogleSigningIn = true);
+                              try {
+                                final result = await handleGoogleAutoLink();
+                                if (result?.user == null || !context.mounted)
+                                  {return;}
+                                Navigator.pushReplacement(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (_) => const HomeScreen(),
+                                  ),
+                                );
+                              } on FirebaseAuthException catch (e) {
+                                debugPrint(
+                                  'GOOGLE AUTH: ${e.code}: ${e.message}',
+                                );
+                                if (!context.mounted) return;
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text(
+                                      e.code == 'need-email-login'
+                                          ? 'Log in with email/password first to link Google.'
+                                          : 'Google sign-in could not finish. Please try again.',
+                                    ),
+                                  ),
+                                );
+                              } catch (e, stack) {
+                                debugPrint('GOOGLE SIGN-IN ERROR: $e\n$stack');
+                                if (!context.mounted) return;
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                    content: Text(
+                                      'Google sign-in could not finish. Please try again.',
+                                    ),
+                                  ),
+                                );
+                              } finally {
+                                if (mounted)
+                                  {setState(() => _isGoogleSigningIn = false);}
+                              }
+                            },
+                      icon: Image.asset("assets/google.webp", height: 22),
+                      label: _isGoogleSigningIn
+                          ? const BusyIndicator()
+                          : const Text("Continue with Google"),
                       style: OutlinedButton.styleFrom(
                         foregroundColor: darkBrand,
                         side: BorderSide(
@@ -539,18 +559,20 @@ class _LoginScreenState extends State<LoginScreen> {
                       children: [
                         const Text("Don't have an account? "),
                         TextButton(
-                          onPressed: () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (_) => const SignUpScreen(),
-                              ),
-                            );
-                          },
+                          onPressed: _isBusy
+                              ? null
+                              : () {
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (_) => const SignUpScreen(),
+                                    ),
+                                  );
+                                },
                           style: TextButton.styleFrom(
-                            padding: EdgeInsets.zero,
-                            minimumSize: Size.zero,
-                            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                            padding: const EdgeInsets.symmetric(horizontal: 12),
+                            minimumSize: const Size(48, 48),
+                            tapTargetSize: MaterialTapTargetSize.padded,
                           ),
                           child: const Text(
                             "Sign up",

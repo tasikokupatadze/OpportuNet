@@ -1,6 +1,9 @@
+import 'app_ui.dart';
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+
 import 'userprofile.dart';
 import 'commentssheet.dart';
 import 'createpost.dart';
@@ -46,6 +49,11 @@ class _CommunityFeedState extends State<CommunityFeed> {
   FeedSort _sort = FeedSort.newest;
   String _query = "";
   final _searchCtrl = TextEditingController();
+  late Stream<QuerySnapshot> _postsStream = _connectPosts();
+  Stream<QuerySnapshot> _connectPosts() => FirebaseFirestore.instance
+      .collection('posts')
+      .orderBy('timestamp', descending: true)
+      .snapshots();
 
   @override
   void dispose() {
@@ -86,105 +94,132 @@ class _CommunityFeedState extends State<CommunityFeed> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: kBg,
-      body: SafeArea(
-        bottom: false,
-        child: StreamBuilder<QuerySnapshot>(
-          stream: FirebaseFirestore.instance
-              .collection("posts")
-              .orderBy("timestamp", descending: true)
-              .snapshots(),
-          builder: (context, snapshot) {
-            final all = snapshot.data?.docs ?? [];
-            final counts = <String, int>{"All": all.length};
-            for (final d in all) {
-              final c = categoryOf(
-                      ((d.data() as Map)["category"] ?? "General") as String)
-                  .name;
-              counts[c] = (counts[c] ?? 0) + 1;
-            }
-            final posts = _apply(all);
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+      body: ContentWidth(
+        maxWidth: 760,
+        child: SafeArea(
+          bottom: false,
+          child: StreamBuilder<QuerySnapshot>(
+            stream: _postsStream,
+            builder: (context, snapshot) {
+              final all = snapshot.data?.docs ?? [];
+              final counts = <String, int>{"All": all.length};
+              for (final d in all) {
+                final c = categoryOf(
+                  ((d.data() as Map)["category"] ?? "General") as String,
+                ).name;
+                counts[c] = (counts[c] ?? 0) + 1;
+              }
+              final posts = _apply(all);
 
-            return CustomScrollView(
-              slivers: [
-                SliverToBoxAdapter(child: _header()),
-                SliverPersistentHeader(
-                  pinned: true,
-                  delegate: _PinnedFilters(
-                    child: _filterBar(counts),
-                  ),
-                ),
-                if (snapshot.hasError)
-                  SliverFillRemaining(
-                    hasScrollBody: false,
-                    child: _empty(Icons.error_outline, "Something went wrong",
-                        "${snapshot.error}"),
-                  )
-                else if (snapshot.connectionState == ConnectionState.waiting)
-                  const SliverFillRemaining(
-                    hasScrollBody: false,
-                    child: Center(
-                        child: CircularProgressIndicator(color: kAccentDark)),
-                  )
-                else if (posts.isEmpty)
-                  SliverFillRemaining(
-                    hasScrollBody: false,
-                    child: _empty(
-                      categoryOf(_category).icon,
-                      _category == "All"
-                          ? "No posts yet"
-                          : "No $_category posts yet",
-                      "Be the first to start a conversation.",
+              return CustomScrollView(
+                slivers: [
+                  SliverToBoxAdapter(child: _header()),
+                  SliverPersistentHeader(
+                    pinned: true,
+                    delegate: _PinnedFilters(
+                      extent: 118 +
+                          (MediaQuery.textScalerOf(context).scale(14) - 14) * 3,
+                      child: _filterBar(counts),
                     ),
-                  )
-                else
-                  SliverPadding(
-                    padding: const EdgeInsets.fromLTRB(14, 6, 14, 100),
-                    sliver: SliverList.builder(
-                      itemCount: posts.length,
-                      itemBuilder: (context, i) =>
-                          FutureBuilder<DocumentSnapshot>(
-                        future: FirebaseFirestore.instance
-                            .collection('users')
-                            .doc(FirebaseAuth.instance.currentUser?.uid)
-                            .get(),
-                        builder: (context, roleSnapshot) {
-                          final roleData = roleSnapshot.data?.data()
-                              as Map<String, dynamic>?;
-                          final isOrganizer = roleData?['role'] == 'organizer';
+                  ),
+                  if (snapshot.hasError)
+                    SliverFillRemaining(
+                      hasScrollBody: false,
+                      child: LoadError(
+                        message:
+                            'Could not load posts. Check your connection and try again.',
+                        onRetry: () =>
+                            setState(() => _postsStream = _connectPosts()),
+                      ),
+                    )
+                  else if (snapshot.connectionState == ConnectionState.waiting)
+                    SliverFillRemaining(
+                      hasScrollBody: false,
+                      child: Center(
+                        child: CircularProgressIndicator(color: kAccentDark),
+                      ),
+                    )
+                  else if (posts.isEmpty)
+                    SliverFillRemaining(
+                      hasScrollBody: false,
+                      child: _empty(
+                        categoryOf(_category).icon,
+                        _query.trim().isNotEmpty
+                            ? 'No matching posts'
+                            : _sort == FeedSort.saved
+                                ? 'No saved posts here'
+                                : _category == 'All'
+                                    ? 'No posts yet'
+                                    : 'No $_category posts yet',
+                        _query.trim().isNotEmpty
+                            ? 'Try a different search or category.'
+                            : _sort == FeedSort.saved
+                                ? 'Save posts with the bookmark button, or choose All.'
+                                : 'Be the first to start a conversation.',
+                      ),
+                    )
+                  else
+                    SliverPadding(
+                      padding: EdgeInsets.fromLTRB(14, 6, 14, 100),
+                      sliver: SliverList.builder(
+                        itemCount: posts.length,
+                        itemBuilder: (context, i) =>
+                            FutureBuilder<DocumentSnapshot>(
+                          future: FirebaseFirestore.instance
+                              .collection('users')
+                              .doc(FirebaseAuth.instance.currentUser?.uid)
+                              .get(),
+                          builder: (context, roleSnapshot) {
+                            final roleData = roleSnapshot.data?.data()
+                                as Map<String, dynamic>?;
+                            final isOrganizer =
+                                roleData?['role'] == 'organizer';
 
-                          return PostCard(
-                            post: posts[i],
-                            isOrganizer: isOrganizer,
-                          );
-                        },
+                            return PostCard(
+                              post: posts[i],
+                              isOrganizer: isOrganizer,
+                            );
+                          },
+                        ),
                       ),
                     ),
-                  ),
-              ],
-            );
-          },
+                ],
+              );
+            },
+          ),
         ),
       ),
       floatingActionButton: FloatingActionButton.extended(
-        backgroundColor: kInk,
+        backgroundColor: Theme.of(context).colorScheme.inverseSurface,
         elevation: 2,
         onPressed: () {
           Navigator.push(
-              context,
-              MaterialPageRoute(
-                  builder: (_) => CreatePost(
-                      category: _category == "All" ? null : _category)));
+            context,
+            MaterialPageRoute(
+              builder: (_) =>
+                  CreatePost(category: _category == "All" ? null : _category),
+            ),
+          );
         },
-        icon: const Icon(Icons.edit_rounded, color: Colors.white, size: 20),
-        label: const Text("New post",
-            style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
+        icon: Icon(
+          Icons.edit_rounded,
+          color: Theme.of(context).colorScheme.surface,
+          size: 20,
+        ),
+        label: Text(
+          "New post",
+          style: TextStyle(
+            color: Theme.of(context).colorScheme.surface,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
       ),
     );
   }
 
   Widget _header() => Padding(
-        padding: const EdgeInsets.fromLTRB(18, 16, 18, 10),
+        padding: EdgeInsets.fromLTRB(18, 16, 18, 10),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -193,29 +228,35 @@ class _CommunityFeedState extends State<CommunityFeed> {
               onChanged: (v) => setState(() => _query = v),
               decoration: InputDecoration(
                 hintText: "Search posts or people",
-                prefixIcon: const Icon(Icons.search_rounded),
+                prefixIcon: Icon(Icons.search_rounded),
                 suffixIcon: _query.isEmpty
                     ? null
                     : IconButton(
-                        icon: const Icon(Icons.close_rounded),
+                        icon: Icon(Icons.close_rounded),
                         onPressed: () => setState(() {
                           _searchCtrl.clear();
                           _query = "";
                         }),
                       ),
                 filled: true,
-                fillColor: Colors.white,
-                contentPadding: const EdgeInsets.symmetric(vertical: 0),
+                fillColor: Theme.of(context).colorScheme.surface,
+                contentPadding: EdgeInsets.symmetric(vertical: 0),
                 border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(16),
-                    borderSide: const BorderSide(color: kBorder)),
+                  borderRadius: BorderRadius.circular(16),
+                  borderSide: BorderSide(
+                    color: Theme.of(context).colorScheme.outlineVariant,
+                  ),
+                ),
                 enabledBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(16),
-                    borderSide: const BorderSide(color: kBorder)),
+                  borderRadius: BorderRadius.circular(16),
+                  borderSide: BorderSide(
+                    color: Theme.of(context).colorScheme.outlineVariant,
+                  ),
+                ),
                 focusedBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(16),
-                    borderSide:
-                        const BorderSide(color: kAccentDark, width: 1.5)),
+                  borderRadius: BorderRadius.circular(16),
+                  borderSide: BorderSide(color: kAccentDark, width: 1.5),
+                ),
               ),
             ),
           ],
@@ -223,17 +264,19 @@ class _CommunityFeedState extends State<CommunityFeed> {
       );
 
   Widget _filterBar(Map<String, int> counts) => Container(
-        color: kBg,
+        color: Theme.of(context).scaffoldBackgroundColor,
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             SizedBox(
-              height: 44,
+              height: 48 *
+                  (MediaQuery.textScalerOf(context).scale(14) / 14)
+                      .clamp(1.0, 3.0),
               child: ListView.separated(
                 scrollDirection: Axis.horizontal,
-                padding: const EdgeInsets.symmetric(horizontal: 14),
+                padding: EdgeInsets.symmetric(horizontal: 14),
                 itemCount: kCategories.length,
-                separatorBuilder: (_, __) => const SizedBox(width: 8),
+                separatorBuilder: (_, __) => SizedBox(width: 8),
                 itemBuilder: (_, i) {
                   final c = kCategories[i];
                   final selected = c.name == _category;
@@ -241,53 +284,76 @@ class _CommunityFeedState extends State<CommunityFeed> {
                   return GestureDetector(
                     onTap: () => setState(() => _category = c.name),
                     child: AnimatedContainer(
-                      duration: const Duration(milliseconds: 180),
-                      padding: const EdgeInsets.symmetric(horizontal: 14),
+                      duration: Duration(milliseconds: 180),
+                      padding: EdgeInsets.symmetric(horizontal: 14),
                       decoration: BoxDecoration(
-                        color: selected ? c.color : Colors.white,
+                        color: selected
+                            ? brandInk
+                            : Theme.of(context).colorScheme.surface,
                         borderRadius: BorderRadius.circular(22),
-                        border: Border.all(color: selected ? c.color : kBorder),
+                        border: Border.all(
+                          color: selected
+                              ? brandInk
+                              : Theme.of(context).colorScheme.outlineVariant,
+                        ),
                       ),
-                      child: Row(children: [
-                        Icon(c.icon,
-                            size: 17, color: selected ? Colors.white : c.color),
-                        const SizedBox(width: 6),
-                        Text(c.name,
-                            style: TextStyle(
-                                fontWeight: FontWeight.w600,
-                                fontSize: 13.5,
-                                color: selected ? Colors.white : kInk)),
-                        if (n > 0) ...[
-                          const SizedBox(width: 6),
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 6, vertical: 1),
-                            decoration: BoxDecoration(
-                              color: selected
-                                  ? Colors.white.withValues(alpha: 0.25)
-                                  : c.color.withValues(alpha: 0.12),
-                              borderRadius: BorderRadius.circular(10),
-                            ),
-                            child: Text("$n",
-                                style: TextStyle(
-                                    fontSize: 11,
-                                    fontWeight: FontWeight.w700,
-                                    color: selected ? Colors.white : c.color)),
+                      child: Row(
+                        children: [
+                          Icon(
+                            c.icon,
+                            size: 17,
+                            color: selected ? Colors.white : c.color,
                           ),
+                          SizedBox(width: 6),
+                          Text(
+                            c.name,
+                            style: TextStyle(
+                              fontWeight: FontWeight.w600,
+                              fontSize: 13.5,
+                              color: selected
+                                  ? Colors.white
+                                  : Theme.of(context).colorScheme.onSurface,
+                            ),
+                          ),
+                          if (n > 0) ...[
+                            SizedBox(width: 6),
+                            Container(
+                              padding: EdgeInsets.symmetric(
+                                horizontal: 6,
+                                vertical: 1,
+                              ),
+                              decoration: BoxDecoration(
+                                color: selected
+                                    ? Colors.white.withValues(alpha: 0.25)
+                                    : c.color.withValues(alpha: 0.12),
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                              child: Text(
+                                "$n",
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w700,
+                                  color: selected ? Colors.white : c.color,
+                                ),
+                              ),
+                            ),
+                          ],
                         ],
-                      ]),
+                      ),
                     ),
                   );
                 },
               ),
             ),
             Padding(
-              padding: const EdgeInsets.fromLTRB(14, 8, 14, 8),
-              child: Row(children: [
-                _sortTab("Newest", FeedSort.newest),
-                _sortTab("Popular", FeedSort.popular),
-                _sortTab("Saved", FeedSort.saved),
-              ]),
+              padding: EdgeInsets.fromLTRB(14, 8, 14, 8),
+              child: Row(
+                children: [
+                  _sortTab("Newest", FeedSort.newest),
+                  _sortTab("Popular", FeedSort.popular),
+                  _sortTab("Saved", FeedSort.saved),
+                ],
+              ),
             ),
           ],
         ),
@@ -296,62 +362,99 @@ class _CommunityFeedState extends State<CommunityFeed> {
   Widget _sortTab(String label, FeedSort s) {
     final sel = _sort == s;
     return Padding(
-      padding: const EdgeInsets.only(right: 18),
+      padding: EdgeInsets.only(right: 18),
       child: InkWell(
         onTap: () => setState(() => _sort = s),
-        child: Column(mainAxisSize: MainAxisSize.min, children: [
-          Text(label,
-              style: TextStyle(
+        child: ConstrainedBox(
+          constraints: BoxConstraints(minHeight: 48),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                label,
+                style: TextStyle(
                   fontSize: 14,
                   fontWeight: sel ? FontWeight.w700 : FontWeight.w500,
-                  color: sel ? kInk : kInk.withValues(alpha: 0.45))),
-          const SizedBox(height: 4),
-          AnimatedContainer(
-            duration: const Duration(milliseconds: 180),
-            height: 3,
-            width: sel ? 22 : 0,
-            decoration: BoxDecoration(
-                color: kAccentDark, borderRadius: BorderRadius.circular(2)),
+                  color: sel
+                      ? Theme.of(context).colorScheme.onSurface
+                      : Theme.of(context)
+                          .colorScheme
+                          .onSurface
+                          .withValues(alpha: 0.45),
+                ),
+              ),
+              SizedBox(height: 4),
+              AnimatedContainer(
+                duration: Duration(milliseconds: 180),
+                height: 3,
+                width: sel ? 22 : 0,
+                decoration: BoxDecoration(
+                  color: kAccentDark,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+            ],
           ),
-        ]),
+        ),
       ),
     );
   }
 
   Widget _empty(IconData icon, String title, String sub) => Center(
         child: Padding(
-          padding: const EdgeInsets.all(32),
-          child: Column(mainAxisSize: MainAxisSize.min, children: [
-            Container(
-              padding: const EdgeInsets.all(18),
-              decoration: BoxDecoration(
+          padding: EdgeInsets.all(32),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                padding: EdgeInsets.all(18),
+                decoration: BoxDecoration(
                   color: kAccent.withValues(alpha: 0.18),
-                  shape: BoxShape.circle),
-              child: Icon(icon, size: 34, color: kAccentDark),
-            ),
-            const SizedBox(height: 14),
-            Text(title,
-                style: const TextStyle(
-                    fontSize: 17, fontWeight: FontWeight.w700, color: kInk)),
-            const SizedBox(height: 4),
-            Text(sub,
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(icon, size: 34, color: kAccentDark),
+              ),
+              SizedBox(height: 14),
+              Text(
+                title,
+                style: TextStyle(
+                  fontSize: 17,
+                  fontWeight: FontWeight.w700,
+                  color: Theme.of(context).colorScheme.onSurface,
+                ),
+              ),
+              SizedBox(height: 4),
+              Text(
+                sub,
                 textAlign: TextAlign.center,
-                style: TextStyle(color: kInk.withValues(alpha: 0.55))),
-          ]),
+                style: TextStyle(
+                  color: Theme.of(context)
+                      .colorScheme
+                      .onSurface
+                      .withValues(alpha: 0.55),
+                ),
+              ),
+            ],
+          ),
         ),
       );
 }
 
 class _PinnedFilters extends SliverPersistentHeaderDelegate {
   final Widget child;
-  _PinnedFilters({required this.child});
+  final double extent;
+  _PinnedFilters({required this.child, required this.extent});
   @override
-  double get minExtent => 88;
+  double get minExtent => extent;
   @override
-  double get maxExtent => 88;
+  double get maxExtent => extent;
   @override
   Widget build(
-          BuildContext context, double shrinkOffset, bool overlapsContent) =>
+    BuildContext context,
+    double shrinkOffset,
+    bool overlapsContent,
+  ) =>
       SizedBox.expand(child: child);
   @override
   bool shouldRebuild(covariant _PinnedFilters old) => true;
@@ -365,9 +468,7 @@ class PostCard extends StatelessWidget {
   void _openProfile(BuildContext context, String uid) {
     if (uid.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text("This post doesn't have a valid user profile."),
-        ),
+        SnackBar(content: Text("This post doesn't have a valid user profile.")),
       );
       return;
     }
@@ -398,18 +499,18 @@ class PostCard extends StatelessWidget {
     final ref = FirebaseFirestore.instance.collection("posts").doc(post.id);
 
     return Container(
-      margin: const EdgeInsets.only(bottom: 12),
+      margin: EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Theme.of(context).colorScheme.surface,
         borderRadius: BorderRadius.circular(22),
-        border: Border.all(color: kBorder),
+        border: Border.all(color: Theme.of(context).colorScheme.outlineVariant),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           // Post header: avatar, username, category, timestamp, menu.
           Padding(
-            padding: const EdgeInsets.fromLTRB(14, 12, 4, 0),
+            padding: EdgeInsets.fromLTRB(14, 12, 4, 0),
             child: Row(
               children: [
                 GestureDetector(
@@ -447,7 +548,7 @@ class PostCard extends StatelessWidget {
                     },
                   ),
                 ),
-                const SizedBox(width: 10),
+                SizedBox(width: 10),
                 Expanded(
                   child: GestureDetector(
                     onTap: () => _openProfile(context, userId),
@@ -456,17 +557,17 @@ class PostCard extends StatelessWidget {
                       children: [
                         Text(
                           username,
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontWeight: FontWeight.w700,
                             fontSize: 15,
-                            color: kInk,
+                            color: Theme.of(context).colorScheme.onSurface,
                           ),
                         ),
-                        const SizedBox(height: 2),
+                        SizedBox(height: 2),
                         Row(
                           children: [
                             Icon(cat.icon, size: 13, color: cat.color),
-                            const SizedBox(width: 4),
+                            SizedBox(width: 4),
                             Flexible(
                               child: Text(
                                 cat.name,
@@ -482,7 +583,10 @@ class PostCard extends StatelessWidget {
                               Text(
                                 "  ·  ",
                                 style: TextStyle(
-                                  color: kInk.withValues(alpha: 0.35),
+                                  color: Theme.of(context)
+                                      .colorScheme
+                                      .onSurface
+                                      .withValues(alpha: 0.35),
                                 ),
                               ),
                               Flexible(
@@ -491,7 +595,10 @@ class PostCard extends StatelessWidget {
                                   overflow: TextOverflow.ellipsis,
                                   style: TextStyle(
                                     fontSize: 12,
-                                    color: kInk.withValues(alpha: 0.45),
+                                    color: Theme.of(context)
+                                        .colorScheme
+                                        .onSurface
+                                        .withValues(alpha: 0.45),
                                   ),
                                 ),
                               ),
@@ -505,7 +612,10 @@ class PostCard extends StatelessWidget {
                 PopupMenuButton<String>(
                   icon: Icon(
                     Icons.more_horiz_rounded,
-                    color: kInk.withValues(alpha: 0.5),
+                    color: Theme.of(context)
+                        .colorScheme
+                        .onSurface
+                        .withValues(alpha: 0.5),
                   ),
                   onSelected: (v) async {
                     if (v == "profile") {
@@ -519,20 +629,20 @@ class PostCard extends StatelessWidget {
                       final confirm = await showDialog<bool>(
                         context: context,
                         builder: (dialogContext) => AlertDialog(
-                          title: const Text("Delete post?"),
-                          content: const Text(
+                          title: Text("Delete post?"),
+                          content: Text(
                             "Are you sure you want to permanently delete this post?",
                           ),
                           actions: [
                             TextButton(
                               onPressed: () =>
                                   Navigator.pop(dialogContext, false),
-                              child: const Text("Cancel"),
+                              child: Text("Cancel"),
                             ),
                             TextButton(
                               onPressed: () =>
                                   Navigator.pop(dialogContext, true),
-                              child: const Text(
+                              child: Text(
                                 "Delete",
                                 style: TextStyle(color: Colors.red),
                               ),
@@ -547,29 +657,24 @@ class PostCard extends StatelessWidget {
                         await ref.delete();
 
                         if (!context.mounted) return;
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text("Post deleted")),
-                        );
+                        ScaffoldMessenger.of(
+                          context,
+                        ).showSnackBar(SnackBar(content: Text("Post deleted")));
                       } catch (e) {
                         if (!context.mounted) return;
                         ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            content: Text("Could not delete post: $e"),
-                          ),
+                          SnackBar(content: Text("Could not delete post: $e")),
                         );
                       }
                     }
                   },
                   itemBuilder: (_) => [
-                    const PopupMenuItem(
+                    PopupMenuItem(
                       value: "profile",
                       child: Text("View profile"),
                     ),
                     if (user?.uid == userId || isOrganizer)
-                      const PopupMenuItem(
-                        value: "delete",
-                        child: Text("Delete"),
-                      ),
+                      PopupMenuItem(value: "delete", child: Text("Delete")),
                   ],
                 ),
               ],
@@ -579,13 +684,13 @@ class PostCard extends StatelessWidget {
           // Post text: outside the header Row.
           if (text.isNotEmpty)
             Padding(
-              padding: const EdgeInsets.fromLTRB(14, 10, 14, 0),
+              padding: EdgeInsets.fromLTRB(14, 10, 14, 0),
               child: Text(
                 text,
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 15,
                   height: 1.45,
-                  color: kInk,
+                  color: Theme.of(context).colorScheme.onSurface,
                 ),
               ),
             ),
@@ -593,7 +698,7 @@ class PostCard extends StatelessWidget {
           // Post image: outside the header Row.
           if (imageUrl.isNotEmpty)
             Padding(
-              padding: const EdgeInsets.fromLTRB(14, 12, 14, 0),
+              padding: EdgeInsets.fromLTRB(14, 12, 14, 0),
               child: ClipRRect(
                 borderRadius: BorderRadius.circular(16),
                 child: Image.network(
@@ -603,8 +708,8 @@ class PostCard extends StatelessWidget {
                   fit: BoxFit.cover,
                   errorBuilder: (_, __, ___) => Container(
                     height: 220,
-                    color: kBg,
-                    child: const Center(
+                    color: Theme.of(context).scaffoldBackgroundColor,
+                    child: Center(
                       child: Icon(
                         Icons.broken_image_outlined,
                         size: 40,
@@ -618,16 +723,20 @@ class PostCard extends StatelessWidget {
 
           // Like, comments, and save actions.
           Padding(
-            padding: const EdgeInsets.fromLTRB(6, 6, 6, 6),
+            padding: EdgeInsets.fromLTRB(6, 6, 6, 6),
             child: Row(
               children: [
                 _action(
+                  context,
                   icon: isLiked
                       ? Icons.favorite_rounded
                       : Icons.favorite_border_rounded,
                   color: isLiked
-                      ? const Color(0xffe5484d)
-                      : kInk.withValues(alpha: 0.7),
+                      ? Color(0xffe5484d)
+                      : Theme.of(context)
+                          .colorScheme
+                          .onSurface
+                          .withValues(alpha: 0.7),
                   label: "$likes",
                   onTap: () async {
                     if (user == null) return;
@@ -640,27 +749,34 @@ class PostCard extends StatelessWidget {
                   },
                 ),
                 _action(
+                  context,
                   icon: Icons.chat_bubble_outline_rounded,
-                  color: kInk.withValues(alpha: 0.7),
+                  color: Theme.of(context)
+                      .colorScheme
+                      .onSurface
+                      .withValues(alpha: 0.7),
                   label: "$commentsCount",
                   onTap: () {
                     showModalBottomSheet(
                       context: context,
                       isScrollControlled: true,
-                      backgroundColor: Colors.white,
+                      backgroundColor: Theme.of(context).colorScheme.surface,
                       builder: (_) => CommentsSheet(postId: post.id),
                     );
                   },
                 ),
-                const Spacer(),
+                Spacer(),
                 IconButton(
                   icon: Icon(
                     isSaved
                         ? Icons.bookmark_rounded
                         : Icons.bookmark_border_rounded,
                     color: isSaved
-                        ? const Color(0xffe8b100)
-                        : kInk.withValues(alpha: 0.7),
+                        ? Color(0xffe8b100)
+                        : Theme.of(context)
+                            .colorScheme
+                            .onSurface
+                            .withValues(alpha: 0.7),
                   ),
                   onPressed: () async {
                     if (user == null) return;
@@ -694,23 +810,33 @@ class PostCard extends StatelessWidget {
   }
 
   Widget _action(
-          {required IconData icon,
-          required Color color,
-          required String label,
-          required VoidCallback onTap}) =>
+    BuildContext context, {
+    required IconData icon,
+    required Color color,
+    required String label,
+    required VoidCallback onTap,
+  }) =>
       InkWell(
         borderRadius: BorderRadius.circular(20),
         onTap: onTap,
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-          child: Row(children: [
-            Icon(icon, size: 21, color: color),
-            const SizedBox(width: 6),
-            Text(label,
+          padding: EdgeInsets.symmetric(horizontal: 12, vertical: 14),
+          child: Row(
+            children: [
+              Icon(icon, size: 21, color: color),
+              SizedBox(width: 6),
+              Text(
+                label,
                 style: TextStyle(
-                    color: kInk.withValues(alpha: 0.75),
-                    fontWeight: FontWeight.w600)),
-          ]),
+                  color: Theme.of(context)
+                      .colorScheme
+                      .onSurface
+                      .withValues(alpha: 0.75),
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
+          ),
         ),
       );
 
