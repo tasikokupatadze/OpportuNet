@@ -1,8 +1,12 @@
+import 'app_ui.dart';
+
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+
 import 'dart:async';
 import 'dart:io';
+
 import 'package:image_picker/image_picker.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/foundation.dart';
@@ -51,11 +55,9 @@ class _AddOlympScreenState extends State<AddOlympScreen> {
   }
 
   Future<void> _pickImage() async {
-    final XFile? image = await _picker.pickImage(
-      source: ImageSource.gallery,
-    );
+    final XFile? image = await _picker.pickImage(source: ImageSource.gallery);
 
-    if (image == null) return;
+    if (image == null || !mounted) return;
 
     if (kIsWeb) {
       _webImage = await image.readAsBytes();
@@ -66,7 +68,10 @@ class _AddOlympScreenState extends State<AddOlympScreen> {
     setState(() {});
   }
 
+  bool _isPublishing = false;
+
   Future<void> _publishActivity() async {
+    if (_isPublishing) return;
     final title = _titlectrl.text.trim();
 
     final description = _descriptionctrl.text.trim();
@@ -76,22 +81,19 @@ class _AddOlympScreenState extends State<AddOlympScreen> {
 
     if (title.isEmpty || description.isEmpty || website.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text("Please fill in all required fields."),
-        ),
+        const SnackBar(content: Text("Please fill in all required fields.")),
       );
       return;
     }
 
     if (_selectedImage == null && _webImage == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text("Please select an image."),
-        ),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text("Please select an image.")));
       return;
     }
 
+    setState(() => _isPublishing = true);
     try {
       final user = FirebaseAuth.instance.currentUser;
 
@@ -102,11 +104,9 @@ class _AddOlympScreenState extends State<AddOlympScreen> {
       if (imageUrl == null) {
         if (!mounted) return;
 
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text("Image upload failed."),
-          ),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text("Image upload failed.")));
         return;
       }
       await FirebaseFirestore.instance.collection("olympiads").add({
@@ -122,19 +122,16 @@ class _AddOlympScreenState extends State<AddOlympScreen> {
 
       if (!mounted) return;
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text("Activity published!"),
-        ),
-      );
+      ScaffoldMessenger.of(context)
+          .showSnackBar(const SnackBar(content: Text("Activity published!")));
 
       Navigator.pop(context);
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text("Error: $e"),
-        ),
-      );
+      if (!mounted) return;
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text("Error: $e")));
+    } finally {
+      if (mounted) setState(() => _isPublishing = false);
     }
   }
 
@@ -153,10 +150,7 @@ class _AddOlympScreenState extends State<AddOlympScreen> {
     return Scaffold(
       appBar: AppBar(
         centerTitle: true,
-        title: Image.asset(
-          'assets/opportunet1.png',
-          height: 55,
-        ),
+        title: Image.asset('assets/opportunet1.png', height: 55),
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
@@ -172,7 +166,7 @@ class _AddOlympScreenState extends State<AddOlympScreen> {
                 height: 180,
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(16),
-                  color: Colors.grey.shade200,
+                  color: Theme.of(context).colorScheme.surfaceContainerHighest,
                 ),
                 child: (_selectedImage == null && _webImage == null)
                     ? const Column(
@@ -186,14 +180,9 @@ class _AddOlympScreenState extends State<AddOlympScreen> {
                     : ClipRRect(
                         borderRadius: BorderRadius.circular(16),
                         child: kIsWeb
-                            ? Image.memory(
-                                _webImage!,
-                                fit: BoxFit.cover,
-                              )
-                            : Image.file(
-                                _selectedImage!,
-                                fit: BoxFit.cover,
-                              )),
+                            ? Image.memory(_webImage!, fit: BoxFit.cover)
+                            : Image.file(_selectedImage!, fit: BoxFit.cover),
+                      ),
               ),
             ),
             const SizedBox(height: 20),
@@ -253,14 +242,16 @@ class _AddOlympScreenState extends State<AddOlympScreen> {
             const SizedBox(height: 30),
 
             ElevatedButton(
-              onPressed: _publishActivity,
-              child: const Padding(
-                padding: EdgeInsets.symmetric(vertical: 14),
-                child: Text(
-                  "Publish Activity",
-                  style: TextStyle(fontSize: 18),
-                ),
-              ),
+              onPressed: _isPublishing ? null : _publishActivity,
+              child: _isPublishing
+                  ? const BusyIndicator()
+                  : const Padding(
+                      padding: EdgeInsets.symmetric(vertical: 14),
+                      child: Text(
+                        "Publish Activity",
+                        style: TextStyle(fontSize: 18),
+                      ),
+                    ),
             ),
           ],
         ),

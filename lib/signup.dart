@@ -1,10 +1,11 @@
+
+
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-
 
 class SignUpScreen extends StatefulWidget {
   const SignUpScreen({super.key});
@@ -16,6 +17,7 @@ class SignUpScreen extends StatefulWidget {
 class _SignUpScreenState extends State<SignUpScreen> {
   bool _isPswrdHidden = true;
   bool _acceptedTerms = false;
+  bool _isSigningUp = false;
 
   final TextEditingController signupemailctrl = TextEditingController();
   final TextEditingController pswrdctrl = TextEditingController();
@@ -58,9 +60,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
       ),
       enabledBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(14),
-        borderSide: BorderSide(
-          color: Colors.grey.withValues(alpha: 0.3),
-        ),
+        borderSide: BorderSide(color: Colors.grey.withValues(alpha: 0.3)),
       ),
       focusedBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(14),
@@ -71,10 +71,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
 
   Future<void> openLink(String link) async {
     final url = Uri.parse(link);
-    await launchUrl(
-      url,
-      mode: LaunchMode.externalApplication,
-    );
+    await launchUrl(url, mode: LaunchMode.externalApplication);
   }
 
   @override
@@ -270,158 +267,174 @@ class _SignUpScreenState extends State<SignUpScreen> {
                   SizedBox(
                     height: 52,
                     child: ElevatedButton(
-                      onPressed: () async {
-                        if (namectrl.text.trim().isEmpty ||
-                            surnamectrl.text.trim().isEmpty ||
-                            pswrdctrl.text.isEmpty ||
-                            signupemailctrl.text.trim().isEmpty) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text("Please fill all fields."),
-                            ),
-                          );
-                          return;
-                        }
-
-                        if (!signupemailctrl.text.contains("@") ||
-                            !signupemailctrl.text.contains(".")) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text("Please enter a valid email."),
-                            ),
-                          );
-                          return;
-                        }
-
-                        if (!isPasswordValid(pswrdctrl.text)) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text(
-                                "Password must contain at least 8 characters, one letter and one number.",
-                              ),
-                            ),
-                          );
-                          return;
-                        }
-
-                        if (pswrdctrl.text != confirmPswrdctrl.text) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text("Passwords do not match."),
-                            ),
-                          );
-                          return;
-                        }
-
-                        if (!_acceptedTerms) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text(
-                                "You must accept the terms and privacy policy.",
-                              ),
-                            ),
-                          );
-                          return;
-                        }
-
-                        try {
-                          final email = signupemailctrl.text.trim();
-
-                          final userCredential = await FirebaseAuth.instance
-                              .createUserWithEmailAndPassword(
-                            email: email,
-                            password: pswrdctrl.text,
-                          );
-
-                          final user = userCredential.user!;
-
-                          await FirebaseFirestore.instance
-                              .collection('users')
-                              .doc(user.uid)
-                              .set({
-                            'name': namectrl.text.trim(),
-                            'surname': surnamectrl.text.trim(),
-                            'email': email,
-                            'role': 'user',
-                            'aboutMe': '',
-                            'profileImage': '',
-                            'age': '',
-                            'requiresEmailVerification': true,
-                            'createdAt': FieldValue.serverTimestamp(),
-                          });
-
-                          await user.sendEmailVerification();
-                          await FirebaseAuth.instance.signOut();
-
-                          if (!context.mounted) return;
-
-                          await showDialog(
-                            context: context,
-                            builder: (dialogContext) => AlertDialog(
-                              title: const Text('Verify your email'),
-                              content: const Text(
-                                'We sent a verification link to your email address. Please verify your email before logging in.',
-                              ),
-                              actions: [
-                                TextButton(
-                                  onPressed: () {
-                                    Navigator.pop(dialogContext);
-                                  },
-                                  child: const Text(
-                                    'OK',
-                                    style: TextStyle(color: darkBrand),
+                      onPressed: _isSigningUp
+                          ? null
+                          : () async {
+                              if (namectrl.text.trim().isEmpty ||
+                                  surnamectrl.text.trim().isEmpty ||
+                                  pswrdctrl.text.isEmpty ||
+                                  signupemailctrl.text.trim().isEmpty) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                    content: Text("Please fill all fields."),
                                   ),
-                                ),
-                              ],
-                            ),
-                          );
+                                );
+                                return;
+                              }
 
-                          if (!context.mounted) return;
-                          Navigator.pop(context);
-                        } on FirebaseAuthException catch (e) {
-                          String message =
-                              'Registration failed. Please try again.';
+                              if (!signupemailctrl.text.contains("@") ||
+                                  !signupemailctrl.text.contains(".")) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                    content: Text(
+                                      "Please enter a valid email.",
+                                    ),
+                                  ),
+                                );
+                                return;
+                              }
 
-                          if (e.code == 'email-already-in-use') {
-                            message = 'This email is already registered.';
-                          } else if (e.code == 'weak-password') {
-                            message = 'Please choose a stronger password.';
-                          } else if (e.code == 'invalid-email') {
-                            message = 'Please enter a valid email.';
-                          }
+                              if (!isPasswordValid(pswrdctrl.text)) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                    content: Text(
+                                      "Password must contain at least 8 characters, one letter and one number.",
+                                    ),
+                                  ),
+                                );
+                                return;
+                              }
 
-                          if (!context.mounted) return;
+                              if (pswrdctrl.text != confirmPswrdctrl.text) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                    content: Text("Passwords do not match."),
+                                  ),
+                                );
+                                return;
+                              }
 
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(content: Text(message)),
-                          );
-                        } catch (e) {
-                          if (!context.mounted) return;
+                              if (!_acceptedTerms) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                    content: Text(
+                                      "You must accept the terms and privacy policy.",
+                                    ),
+                                  ),
+                                );
+                                return;
+                              }
 
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text(
-                                'Your account could not be fully created. Please try again.',
-                              ),
-                            ),
-                          );
-                        }
-                      },
+                              setState(() => _isSigningUp = true);
+                              try {
+                                final email = signupemailctrl.text.trim();
+
+                                final userCredential = await FirebaseAuth
+                                    .instance
+                                    .createUserWithEmailAndPassword(
+                                  email: email,
+                                  password: pswrdctrl.text,
+                                );
+
+                                final user = userCredential.user!;
+
+                                await FirebaseFirestore.instance
+                                    .collection('users')
+                                    .doc(user.uid)
+                                    .set({
+                                  'name': namectrl.text.trim(),
+                                  'surname': surnamectrl.text.trim(),
+                                  'email': email,
+                                  'role': 'user',
+                                  'aboutMe': '',
+                                  'profileImage': '',
+                                  'age': '',
+                                  'requiresEmailVerification': true,
+                                  'createdAt': FieldValue.serverTimestamp(),
+                                });
+
+                                await user.sendEmailVerification();
+                                await FirebaseAuth.instance.signOut();
+
+                                if (!context.mounted) return;
+
+                                await showDialog(
+                                  context: context,
+                                  builder: (dialogContext) => AlertDialog(
+                                    title: const Text('Verify your email'),
+                                    content: const Text(
+                                      'We sent a verification link to your email address. Please verify your email before logging in.',
+                                    ),
+                                    actions: [
+                                      TextButton(
+                                        onPressed: () {
+                                          Navigator.pop(dialogContext);
+                                        },
+                                        child: const Text(
+                                          'OK',
+                                          style: TextStyle(color: darkBrand),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                );
+
+                                if (!context.mounted) return;
+                                Navigator.pop(context);
+                              } on FirebaseAuthException catch (e) {
+                                String message =
+                                    'Registration failed. Please try again.';
+
+                                if (e.code == 'email-already-in-use') {
+                                  message = 'This email is already registered.';
+                                } else if (e.code == 'weak-password') {
+                                  message =
+                                      'Please choose a stronger password.';
+                                } else if (e.code == 'invalid-email') {
+                                  message = 'Please enter a valid email.';
+                                }
+
+                                if (!context.mounted) return;
+
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(content: Text(message)),
+                                );
+                              } catch (e) {
+                                if (!context.mounted) return;
+
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                    content: Text(
+                                      'Your account could not be fully created. Please try again.',
+                                    ),
+                                  ),
+                                );
+                              } finally {
+                                if (mounted)
+                                  {setState(() => _isSigningUp = false);}
+                              }
+                            },
                       style: ElevatedButton.styleFrom(
                         backgroundColor: brand,
-                        foregroundColor: Colors.white,
+                        foregroundColor: const Color(0xff2b88b4),
                         elevation: 0,
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(14),
                         ),
                       ),
-                      child: const Text(
-                        "Create Account",
-                        style: TextStyle(
-                          fontSize: 17,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
+                      child: _isSigningUp
+                          ? const SizedBox(
+  height: 20,
+  width: 20,
+  child: CircularProgressIndicator(strokeWidth: 2),
+)
+                          : const Text(
+                              "Create Account",
+                              style: TextStyle(
+                                fontSize: 17,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
                     ),
                   ),
 
@@ -434,13 +447,15 @@ class _SignUpScreenState extends State<SignUpScreen> {
                       children: [
                         const Text("Already have an account? "),
                         TextButton(
-                          onPressed: () {
-                            Navigator.pop(context);
-                          },
+                          onPressed: _isSigningUp
+                              ? null
+                              : () {
+                                  Navigator.pop(context);
+                                },
                           style: TextButton.styleFrom(
-                            padding: EdgeInsets.zero,
-                            minimumSize: Size.zero,
-                            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                            padding: const EdgeInsets.symmetric(horizontal: 12),
+                            minimumSize: const Size(48, 48),
+                            tapTargetSize: MaterialTapTargetSize.padded,
                           ),
                           child: const Text(
                             "Log in",

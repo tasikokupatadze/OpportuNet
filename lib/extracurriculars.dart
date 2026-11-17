@@ -1,8 +1,12 @@
+import 'app_ui.dart';
+
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+
 import 'dart:async';
 import 'dart:io';
+
 import 'package:image_picker/image_picker.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/foundation.dart';
@@ -79,7 +83,7 @@ class _AddActivityScreenState extends State<AddActivityScreen> {
       imageQuality: 85,
     );
 
-    if (image == null) return;
+    if (image == null || !mounted) return;
 
     if (kIsWeb) {
       _webImage = await image.readAsBytes();
@@ -90,7 +94,10 @@ class _AddActivityScreenState extends State<AddActivityScreen> {
     setState(() {});
   }
 
+  bool _isPublishing = false;
+
   Future<void> _publishActivity() async {
+    if (_isPublishing) return;
     final title = _titlectrl.text.trim();
 
     final description = _descriptionctrl.text.trim();
@@ -105,22 +112,19 @@ class _AddActivityScreenState extends State<AddActivityScreen> {
         subject == null ||
         cost.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text("Please fill in all required fields."),
-        ),
+        const SnackBar(content: Text("Please fill in all required fields.")),
       );
       return;
     }
 
     if (_selectedImage == null && _webImage == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text("Please select an image."),
-        ),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text("Please select an image.")));
       return;
     }
 
+    setState(() => _isPublishing = true);
     try {
       final user = FirebaseAuth.instance.currentUser;
 
@@ -131,11 +135,9 @@ class _AddActivityScreenState extends State<AddActivityScreen> {
       if (imageUrl == null) {
         if (!mounted) return;
 
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text("Image upload failed."),
-          ),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text("Image upload failed.")));
         return;
       }
       await FirebaseFirestore.instance.collection(_selectedCategory).add({
@@ -152,19 +154,16 @@ class _AddActivityScreenState extends State<AddActivityScreen> {
 
       if (!mounted) return;
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text("Activity published!"),
-        ),
-      );
+      ScaffoldMessenger.of(context)
+          .showSnackBar(const SnackBar(content: Text("Activity published!")));
 
       Navigator.pop(context);
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text("Error: $e"),
-        ),
-      );
+      if (!mounted) return;
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text("Error: $e")));
+    } finally {
+      if (mounted) setState(() => _isPublishing = false);
     }
   }
 
@@ -183,10 +182,7 @@ class _AddActivityScreenState extends State<AddActivityScreen> {
     return Scaffold(
       appBar: AppBar(
         centerTitle: true,
-        title: Image.asset(
-          'assets/opportunet1.png',
-          height: 55,
-        ),
+        title: Image.asset('assets/opportunet1.png', height: 55),
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
@@ -202,7 +198,7 @@ class _AddActivityScreenState extends State<AddActivityScreen> {
                 height: 180,
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(16),
-                  color: Colors.grey.shade200,
+                  color: Theme.of(context).colorScheme.surfaceContainerHighest,
                 ),
                 child: (_selectedImage == null && _webImage == null)
                     ? const Column(
@@ -216,14 +212,9 @@ class _AddActivityScreenState extends State<AddActivityScreen> {
                     : ClipRRect(
                         borderRadius: BorderRadius.circular(16),
                         child: kIsWeb
-                            ? Image.memory(
-                                _webImage!,
-                                fit: BoxFit.cover,
-                              )
-                            : Image.file(
-                                _selectedImage!,
-                                fit: BoxFit.cover,
-                              )),
+                            ? Image.memory(_webImage!, fit: BoxFit.cover)
+                            : Image.file(_selectedImage!, fit: BoxFit.cover),
+                      ),
               ),
             ),
             const SizedBox(height: 20),
@@ -298,10 +289,7 @@ class _AddActivityScreenState extends State<AddActivityScreen> {
                 border: OutlineInputBorder(),
               ),
               items: _subjects.map((subject) {
-                return DropdownMenuItem(
-                  value: subject,
-                  child: Text(subject),
-                );
+                return DropdownMenuItem(value: subject, child: Text(subject));
               }).toList(),
               onChanged: (value) {
                 setState(() {
@@ -325,14 +313,16 @@ class _AddActivityScreenState extends State<AddActivityScreen> {
             const SizedBox(height: 30),
 
             ElevatedButton(
-              onPressed: _publishActivity,
-              child: const Padding(
-                padding: EdgeInsets.symmetric(vertical: 14),
-                child: Text(
-                  "Publish Activity",
-                  style: TextStyle(fontSize: 18),
-                ),
-              ),
+              onPressed: _isPublishing ? null : _publishActivity,
+              child: _isPublishing
+                  ? const BusyIndicator()
+                  : const Padding(
+                      padding: EdgeInsets.symmetric(vertical: 14),
+                      child: Text(
+                        "Publish Activity",
+                        style: TextStyle(fontSize: 18),
+                      ),
+                    ),
             ),
           ],
         ),

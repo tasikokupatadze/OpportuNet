@@ -1,3 +1,4 @@
+import 'app_ui.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
@@ -9,14 +10,11 @@ class UserProfile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xfff4f9fc),
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
         elevation: 0,
-        backgroundColor: Colors.white,
-        title: Image.asset(
-          'assets/opportunet1.png',
-          height: 60,
-        ),
+        backgroundColor: Theme.of(context).colorScheme.surface,
+        title: Image.asset('assets/opportunet1.png', height: 60),
         centerTitle: true,
       ),
       body: StreamBuilder<DocumentSnapshot>(
@@ -24,19 +22,15 @@ class UserProfile extends StatelessWidget {
             FirebaseFirestore.instance.collection("users").doc(uid).snapshots(),
         builder: (context, snapshot) {
           if (snapshot.hasError) {
-            return Center(
-              child: Text("Error: ${snapshot.error}"),
-            );
+            return Center(child: Text("Error: ${snapshot.error}"));
           }
 
           if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
+            return Center(child: CircularProgressIndicator());
           }
 
           if (!snapshot.hasData || !snapshot.data!.exists) {
-            return const Center(
-              child: Text("User not found"),
-            );
+            return Center(child: Text("User not found"));
           }
 
           final data = snapshot.data!.data() as Map<String, dynamic>? ?? {};
@@ -50,28 +44,28 @@ class UserProfile extends StatelessWidget {
           final String fullName = "$name $surname".trim();
 
           return SingleChildScrollView(
-            padding: const EdgeInsets.fromLTRB(16, 20, 16, 24),
+            padding: EdgeInsets.fromLTRB(16, 20, 16, 24),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Container(
                   width: double.infinity,
-                  padding: const EdgeInsets.all(22),
+                  padding: EdgeInsets.all(22),
                   decoration: BoxDecoration(
-                    gradient: const LinearGradient(
-                      colors: [
-                        Color(0xff84d6fe),
-                        Color(0xffb6ebff),
-                      ],
+                    gradient: LinearGradient(
+                      colors: [Color(0xff84d6fe), Color(0xffb6ebff)],
                       begin: Alignment.topLeft,
                       end: Alignment.bottomRight,
                     ),
                     borderRadius: BorderRadius.circular(28),
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.06),
+                        color: Theme.of(context)
+                            .colorScheme
+                            .onSurface
+                            .withValues(alpha: 0.06),
                         blurRadius: 14,
-                        offset: const Offset(0, 6),
+                        offset: Offset(0, 6),
                       ),
                     ],
                   ),
@@ -80,7 +74,10 @@ class UserProfile extends StatelessWidget {
                       Container(
                         decoration: BoxDecoration(
                           shape: BoxShape.circle,
-                          border: Border.all(color: Colors.white, width: 3),
+                          border: Border.all(
+                            color: Theme.of(context).colorScheme.surface,
+                            width: 3,
+                          ),
                         ),
                         child: CircleAvatar(
                           radius: 48,
@@ -93,34 +90,37 @@ class UserProfile extends StatelessWidget {
                                     height: 96,
                                     fit: BoxFit.cover,
                                     errorBuilder: (context, error, stackTrace) {
-                                      return const Icon(
+                                      return Icon(
                                         Icons.person,
                                         size: 42,
-                                        color: Colors.white,
+                                        color: Theme.of(context)
+                                            .colorScheme
+                                            .surface,
                                       );
                                     },
                                   )
-                                : const Icon(
+                                : Icon(
                                     Icons.person,
                                     size: 42,
-                                    color: Colors.white,
+                                    color:
+                                        Theme.of(context).colorScheme.surface,
                                   ),
                           ),
                         ),
                       ),
-                      const SizedBox(height: 14),
+                      SizedBox(height: 14),
                       Text(
                         fullName.isEmpty ? "User Profile" : fullName,
                         textAlign: TextAlign.center,
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 24,
                           fontWeight: FontWeight.bold,
-                          color: Colors.black,
+                          color: brandInk,
                         ),
                       ),
-                      const SizedBox(height: 8),
+                      SizedBox(height: 8),
                       Container(
-                        padding: const EdgeInsets.symmetric(
+                        padding: EdgeInsets.symmetric(
                           horizontal: 12,
                           vertical: 6,
                         ),
@@ -128,7 +128,7 @@ class UserProfile extends StatelessWidget {
                           color: Colors.white.withValues(alpha: 0.7),
                           borderRadius: BorderRadius.circular(20),
                         ),
-                        child: const Text(
+                        child: Text(
                           "Community Member",
                           style: TextStyle(
                             fontSize: 12,
@@ -140,19 +140,21 @@ class UserProfile extends StatelessWidget {
                     ],
                   ),
                 ),
-                const SizedBox(height: 18),
+                SizedBox(height: 18),
                 Row(
                   children: [
                     Expanded(
                       child: _infoCard(
+                        context,
                         icon: Icons.cake_outlined,
                         title: "Age",
                         value: age.isEmpty ? "Not added" : age,
                       ),
                     ),
-                    const SizedBox(width: 12),
+                    SizedBox(width: 12),
                     Expanded(
                       child: _infoCard(
+                        context,
                         icon: Icons.person_outline,
                         title: "Name",
                         value: name.isEmpty ? "Not added" : name,
@@ -160,32 +162,34 @@ class UserProfile extends StatelessWidget {
                     ),
                   ],
                 ),
-                const SizedBox(height: 12),
+                SizedBox(height: 12),
                 _sectionCard(
+                  context,
                   title: "About me",
                   icon: Icons.edit_note,
                   child: Text(
                     aboutMe.trim().isEmpty
                         ? "This user has not added an about section yet."
                         : aboutMe.trim(),
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 14,
                       height: 1.5,
-                      color: Colors.black87,
+                      color: Theme.of(context).colorScheme.onSurface,
                     ),
                   ),
                 ),
-                const SizedBox(height: 12),
+                SizedBox(height: 12),
                 _sectionCard(
+                  context,
                   title: "Profile details",
                   icon: Icons.badge_outlined,
                   child: Column(
                     children: [
-                      _detailRow("Name", name),
-                      const SizedBox(height: 10),
-                      _detailRow("Surname", surname),
-                      const SizedBox(height: 10),
-                      _detailRow("Age", age),
+                      _detailRow(context, "Name", name),
+                      SizedBox(height: 10),
+                      _detailRow(context, "Surname", surname),
+                      SizedBox(height: 10),
+                      _detailRow(context, "Age", age),
                     ],
                   ),
                 ),
@@ -197,48 +201,39 @@ class UserProfile extends StatelessWidget {
     );
   }
 
-  static Widget _infoCard({
+  static Widget _infoCard(
+    BuildContext context, {
     required IconData icon,
     required String title,
     required String value,
   }) {
     return Container(
-      padding: const EdgeInsets.all(14),
+      padding: EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Theme.of(context).colorScheme.surface,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: const Color(0xffdbeaf2)),
+        border: Border.all(color: Color(0xffdbeaf2)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Container(
-            padding: const EdgeInsets.all(9),
+            padding: EdgeInsets.all(9),
             decoration: BoxDecoration(
-              color: const Color(0xff84d6fe).withValues(alpha: 0.16),
+              color: Color(0xff84d6fe).withValues(alpha: 0.16),
               borderRadius: BorderRadius.circular(12),
             ),
-            child: Icon(
-              icon,
-              color: const Color(0xff2b88b4),
-              size: 20,
-            ),
+            child: Icon(icon, color: Color(0xff2b88b4), size: 20),
           ),
-          const SizedBox(height: 12),
-          Text(
-            title,
-            style: const TextStyle(
-              fontSize: 13,
-              color: Colors.grey,
-            ),
-          ),
-          const SizedBox(height: 4),
+          SizedBox(height: 12),
+          Text(title, style: TextStyle(fontSize: 13, color: Colors.grey)),
+          SizedBox(height: 4),
           Text(
             value,
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 16,
               fontWeight: FontWeight.bold,
-              color: Colors.black,
+              color: Theme.of(context).colorScheme.onSurface,
             ),
           ),
         ],
@@ -246,23 +241,25 @@ class UserProfile extends StatelessWidget {
     );
   }
 
-  static Widget _sectionCard({
+  static Widget _sectionCard(
+    BuildContext context, {
     required String title,
     required IconData icon,
     required Widget child,
   }) {
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(16),
+      padding: EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Theme.of(context).colorScheme.surface,
         borderRadius: BorderRadius.circular(22),
-        border: Border.all(color: const Color(0xffdbeaf2)),
+        border: Border.all(color: Color(0xffdbeaf2)),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.03),
+            color:
+                Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.03),
             blurRadius: 10,
-            offset: const Offset(0, 4),
+            offset: Offset(0, 4),
           ),
         ],
       ),
@@ -272,54 +269,44 @@ class UserProfile extends StatelessWidget {
           Row(
             children: [
               Container(
-                padding: const EdgeInsets.all(9),
+                padding: EdgeInsets.all(9),
                 decoration: BoxDecoration(
-                  color: const Color(0xff84d6fe).withValues(alpha: 0.16),
+                  color: Color(0xff84d6fe).withValues(alpha: 0.16),
                   borderRadius: BorderRadius.circular(12),
                 ),
-                child: Icon(
-                  icon,
-                  color: const Color(0xff2b88b4),
-                  size: 20,
-                ),
+                child: Icon(icon, color: Color(0xff2b88b4), size: 20),
               ),
-              const SizedBox(width: 10),
+              SizedBox(width: 10),
               Text(
                 title,
-                style: const TextStyle(
-                  fontSize: 17,
-                  fontWeight: FontWeight.bold,
-                ),
+                style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold),
               ),
             ],
           ),
-          const SizedBox(height: 14),
+          SizedBox(height: 14),
           child,
         ],
       ),
     );
   }
 
-  static Widget _detailRow(String label, String value) {
+  static Widget _detailRow(BuildContext context, String label, String value) {
     return Row(
       children: [
         SizedBox(
           width: 72,
           child: Text(
             label,
-            style: const TextStyle(
-              fontSize: 14,
-              color: Colors.grey,
-            ),
+            style: TextStyle(fontSize: 14, color: Colors.grey),
           ),
         ),
         Expanded(
           child: Text(
             value.trim().isEmpty ? "Not added" : value,
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 14,
               fontWeight: FontWeight.w600,
-              color: Colors.black87,
+              color: Theme.of(context).colorScheme.onSurface,
             ),
           ),
         ),

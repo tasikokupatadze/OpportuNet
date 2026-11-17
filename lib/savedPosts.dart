@@ -1,86 +1,81 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
-class SavedPostsScreen extends StatelessWidget {
-  final String currentUserId;
+import 'app_ui.dart';
+import 'community_feed.dart';
 
+class SavedPostsScreen extends StatefulWidget {
+  final String currentUserId;
   const SavedPostsScreen({super.key, required this.currentUserId});
+  @override
+  State<SavedPostsScreen> createState() => _SavedPostsScreenState();
+}
+
+class _SavedPostsScreenState extends State<SavedPostsScreen> {
+  late Stream<QuerySnapshot> _stream;
+  bool _isOrganizer = false;
+  @override
+  void initState() {
+    super.initState();
+    _connect();
+    _loadRole();
+  }
+
+  void _connect() {
+    _stream = FirebaseFirestore.instance
+        .collection('posts')
+        .where('savedBy', arrayContains: widget.currentUserId)
+        .snapshots();
+  }
+
+  Future<void> _loadRole() async {
+    try {
+      final doc = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(widget.currentUserId)
+          .get();
+      if (mounted)
+        {setState(() => _isOrganizer = doc.data()?['role'] == 'organizer');}
+    } catch (_) {
+      // Role-specific actions stay hidden when the role cannot be loaded.
+    }
+  }
 
   @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Image.asset(
-          'assets/opportunet1.png',
-          height: 60,
-        ),
-        centerTitle: true,
-      ),
-      body: StreamBuilder<QuerySnapshot>(
-        stream: FirebaseFirestore.instance
-            .collection("posts")
-            .where("savedBy", arrayContains: currentUserId)
-            .snapshots(),
-        builder: (context, snapshot) {
-          if (snapshot.hasError) {
-            return Center(
-              child: Text("Error: ${snapshot.error}"),
-            );
-          }
-
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(
-              child: CircularProgressIndicator(),
-            );
-          }
-
-          final posts = snapshot.data!.docs;
-
-          if (posts.isEmpty) {
-            return const Center(
-              child: Text(
-                "No saved posts yet",
-                style: TextStyle(fontSize: 16),
-              ),
-            );
-          }
-
-          return ListView.builder(
-            padding: const EdgeInsets.all(12),
-            itemCount: posts.length,
-            itemBuilder: (context, index) {
-              final post = posts[index];
-              final data = post.data() as Map<String, dynamic>;
-
-              return Container(
-                margin: const EdgeInsets.only(bottom: 12),
+  Widget build(BuildContext context) => Scaffold(
+        appBar: AppBar(title: const Text('Saved posts')),
+        body: ContentWidth(
+          maxWidth: 760,
+          child: StreamBuilder<QuerySnapshot>(
+            stream: _stream,
+            builder: (context, snapshot) {
+              if (snapshot.hasError) {
+                return LoadError(
+                  message: 'Could not load saved posts.',
+                  onRetry: () => setState(_connect),
+                );
+              }
+              if (!snapshot.hasData)
+                {return const Center(child: CircularProgressIndicator());}
+              final posts = snapshot.data!.docs;
+              if (posts.isEmpty)
+                {return const Center(
+                  child: Padding(
+                    padding: EdgeInsets.all(24),
+                    child: Text(
+                      'No saved posts yet. Tap the bookmark on a post to save it.',
+                      textAlign: TextAlign.center,
+                    ),
+                  ),
+                );}
+              return ListView.builder(
                 padding: const EdgeInsets.all(14),
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(18),
-                  border: Border.all(color: Colors.grey.shade300),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      data["username"] ?? "user",
-                      style: const TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 15,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      data["text"] ?? "",
-                      style: const TextStyle(fontSize: 15),
-                    ),
-                  ],
-                ),
+                itemCount: posts.length,
+                itemBuilder: (_, i) =>
+                    PostCard(post: posts[i], isOrganizer: _isOrganizer),
               );
             },
-          );
-        },
-      ),
-    );
-  }
+          ),
+        ),
+      );
 }

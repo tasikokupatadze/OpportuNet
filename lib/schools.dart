@@ -56,10 +56,7 @@ class _SchoolScreenState extends State<SchoolScreen> {
     final Uri url = Uri.parse(link);
 
     if (await canLaunchUrl(url)) {
-      await launchUrl(
-        url,
-        mode: LaunchMode.externalApplication,
-      );
+      await launchUrl(url, mode: LaunchMode.externalApplication);
     }
   }
 
@@ -68,19 +65,16 @@ class _SchoolScreenState extends State<SchoolScreen> {
     return Scaffold(
       appBar: AppBar(
         centerTitle: true,
-        title: Image.asset(
-          'assets/opportunet1.png',
-          height: 55,
-        ),
+        title: Image.asset('assets/opportunet1.png', height: 55),
       ),
       body: Padding(
-        padding: const EdgeInsets.all(14),
+        padding: EdgeInsets.all(14),
         child: Column(
           children: [
             Expanded(
               child: GridView.builder(
                 itemCount: schools.length,
-                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
                   crossAxisCount: 2,
                   mainAxisSpacing: 14,
                   crossAxisSpacing: 14,
@@ -95,21 +89,21 @@ class _SchoolScreenState extends State<SchoolScreen> {
                     child: Container(
                       decoration: BoxDecoration(
                         borderRadius: BorderRadius.circular(18),
-                        color: Colors.white,
+                        color: Theme.of(context).colorScheme.surface,
                         border: Border.all(
-                          color: Colors.white,
+                          color: Theme.of(context).colorScheme.surface,
                           width: 1.2,
                         ),
-                        boxShadow: const [
+                        boxShadow: [
                           BoxShadow(
                             blurRadius: 6,
                             color: Colors.black26,
                             offset: Offset(0, 4),
-                          )
+                          ),
                         ],
                       ),
                       child: Padding(
-                        padding: const EdgeInsets.all(12),
+                        padding: EdgeInsets.all(12),
                         child: Column(
                           mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                           children: [
@@ -124,28 +118,29 @@ class _SchoolScreenState extends State<SchoolScreen> {
                             Text(
                               school["title"]!,
                               textAlign: TextAlign.center,
-                              style: const TextStyle(
-                                color: Color(0xff84d6fe),
+                              style: TextStyle(
+                                color: Theme.of(context).colorScheme.primary,
                                 fontWeight: FontWeight.bold,
                                 fontSize: 15,
                               ),
                             ),
                             Container(
-                              padding: const EdgeInsets.symmetric(
+                              padding: EdgeInsets.symmetric(
                                 horizontal: 14,
                                 vertical: 7,
                               ),
                               decoration: BoxDecoration(
-                                color: const Color(0xff84d6fe),
+                                color: Theme.of(context).colorScheme.primary,
                                 borderRadius: BorderRadius.circular(30),
                               ),
-                              child: const Text(
+                              child: Text(
                                 "Open",
                                 style: TextStyle(
-                                  color: Colors.black,
+                                  color:
+                                      Theme.of(context).colorScheme.onPrimary,
                                 ),
                               ),
-                            )
+                            ),
                           ],
                         ),
                       ),

@@ -105,7 +105,10 @@ Future<UserCredential?> signInWithEmailAutoLink(
 }
 
 Future<void> handleNativeGoogleSignInInitialization() async {
-  await (_googleSignInInitialization ??= GoogleSignIn.instance.initialize());
+  await (_googleSignInInitialization ??= GoogleSignIn.instance.initialize(
+    serverClientId:
+        '150055874798-uh56m7jqp34l662qqie29u3rpev8n32k.apps.googleusercontent.com',
+  ));
 }
 
 Future<UserCredential?> handleGoogleAutoLink() async {
@@ -492,22 +495,15 @@ class _LoginScreenState extends State<LoginScreen> {
                             ),
                           );
                         } on FirebaseAuthException catch (e) {
-                          if (!context.mounted) return;
-
-                          final message = e.code == 'need-email-login'
-                              ? "Login with email/password first to link your Google account"
-                              : 'Google sign-in failed. Please try again.';
-
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(content: Text(message)),
-                          );
-                        } catch (e) {
+                          debugPrint('GOOGLE AUTH: ${e.code}: ${e.message}');
                           if (!context.mounted) return;
 
                           ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
+                            SnackBar(
                               content: Text(
-                                'Google sign-in failed. Please try again.',
+                                e.code == 'need-email-login'
+                                    ? 'Log in with email/password first to link Google.'
+                                    : '${e.code}: ${e.message}',
                               ),
                             ),
                           );

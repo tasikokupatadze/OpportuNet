@@ -1,3 +1,5 @@
+import 'app_ui.dart';
+
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
@@ -10,6 +12,7 @@ class ResetPassScreen extends StatefulWidget {
 
 class _ResetPassScreenState extends State<ResetPassScreen> {
   final TextEditingController _emailresetctrl = TextEditingController();
+  bool _isSending = false;
 
   @override
   void dispose() {
@@ -18,36 +21,30 @@ class _ResetPassScreenState extends State<ResetPassScreen> {
   }
 
   Future<void> resetPassword() async {
+    if (_isSending) return;
     final email = _emailresetctrl.text.trim();
 
     // Check for empty email
     if (email.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text("Please enter your email address"),
-        ),
+        const SnackBar(content: Text("Please enter your email address")),
       );
       return;
     }
 
     // Basic email validation
-    final emailRegex = RegExp(
-      r'^[^@\s]+@[^@\s]+\.[^@\s]+$',
-    );
+    final emailRegex = RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$');
 
     if (!emailRegex.hasMatch(email)) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text("Please enter a valid email address"),
-        ),
+        const SnackBar(content: Text("Please enter a valid email address")),
       );
       return;
     }
 
+    setState(() => _isSending = true);
     try {
-      await FirebaseAuth.instance.sendPasswordResetEmail(
-        email: email,
-      );
+      await FirebaseAuth.instance.sendPasswordResetEmail(email: email);
 
       if (!mounted) return;
 
@@ -78,9 +75,8 @@ class _ResetPassScreenState extends State<ResetPassScreen> {
           message = "Unable to process your request. Please try again.";
       }
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(message)),
-      );
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text(message)));
     } catch (e) {
       if (!mounted) return;
 
@@ -89,6 +85,8 @@ class _ResetPassScreenState extends State<ResetPassScreen> {
           content: Text("Something went wrong. Please try again."),
         ),
       );
+    } finally {
+      if (mounted) setState(() => _isSending = false);
     }
   }
 
@@ -97,41 +95,44 @@ class _ResetPassScreenState extends State<ResetPassScreen> {
     return Scaffold(
       appBar: AppBar(
         centerTitle: true,
-        title: Image.asset(
-          'assets/opportunet1.png',
-          height: 55,
-        ),
+        title: Image.asset('assets/opportunet1.png', height: 55),
       ),
-      body: Padding(
-        padding: const EdgeInsets.all(14),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            TextField(
-              controller: _emailresetctrl,
-              decoration: const InputDecoration(
-                labelText: "Email",
-                border: OutlineInputBorder(),
-                labelStyle: TextStyle(color: Color(0xff84d6fe)),
-              ),
-              keyboardType: TextInputType.emailAddress,
-            ),
-            const SizedBox(height: 20),
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton(
-                onPressed: resetPassword,
-                child: const Text(
-                  "Reset Password",
-                  style: TextStyle(
-                    color: Color(0xff84d6fe),
-                    fontWeight: FontWeight.bold,
-                    fontSize: 15,
+      body: SafeArea(
+        top: false,
+        child: ContentWidth(
+          maxWidth: 480,
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.all(14),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                TextField(
+                  controller: _emailresetctrl,
+                  decoration: const InputDecoration(
+                    labelText: "Email",
+                    border: OutlineInputBorder(),
+                  ),
+                  keyboardType: TextInputType.emailAddress,
+                ),
+                const SizedBox(height: 20),
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    onPressed: _isSending ? null : resetPassword,
+                    child: _isSending
+                        ? const BusyIndicator()
+                        : const Text(
+                            "Reset Password",
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 15,
+                            ),
+                          ),
                   ),
                 ),
-              ),
+              ],
             ),
-          ],
+          ),
         ),
       ),
     );

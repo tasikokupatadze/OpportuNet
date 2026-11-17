@@ -2,14 +2,14 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
+
 import 'dart:async';
+
 import 'exchdetails.dart';
 import 'activitydetails.dart';
 
 class ExchPrgrmScreen extends StatefulWidget {
-  const ExchPrgrmScreen({
-    super.key,
-  });
+  const ExchPrgrmScreen({super.key});
 
   @override
   State<ExchPrgrmScreen> createState() => _ExchPrgrmScreenState();
@@ -39,10 +39,7 @@ class _ExchPrgrmScreenState extends State<ExchPrgrmScreen> {
     final Uri url = Uri.parse(link);
 
     if (await canLaunchUrl(url)) {
-      await launchUrl(
-        url,
-        mode: LaunchMode.externalApplication,
-      );
+      await launchUrl(url, mode: LaunchMode.externalApplication);
     }
   }
 
@@ -57,30 +54,25 @@ class _ExchPrgrmScreenState extends State<ExchPrgrmScreen> {
     return Scaffold(
       appBar: AppBar(
         centerTitle: true,
-        title: Image.asset(
-          'assets/opportunet1.png',
-          height: 55,
-        ),
+        title: Image.asset('assets/opportunet1.png', height: 55),
       ),
       floatingActionButton: _isOrganizer
           ? FloatingActionButton(
-              backgroundColor: const Color(0xff84d6fe),
-              child: const Icon(
+              backgroundColor: Color(0xff84d6fe),
+              child: Icon(
                 Icons.add,
-                color: Colors.white,
+                color: const Color(0xff17394e),
               ),
               onPressed: () {
                 Navigator.push(
                   context,
-                  MaterialPageRoute(
-                    builder: (_) => const AddExchangeScreen(),
-                  ),
+                  MaterialPageRoute(builder: (_) => AddExchangeScreen()),
                 );
               },
             )
           : null,
       body: Padding(
-        padding: const EdgeInsets.all(14),
+        padding: EdgeInsets.all(14),
         child: Column(
           children: [
             Expanded(
@@ -91,31 +83,24 @@ class _ExchPrgrmScreenState extends State<ExchPrgrmScreen> {
                     .snapshots(),
                 builder: (context, snapshot) {
                   if (snapshot.connectionState == ConnectionState.waiting) {
-                    return const Center(
-                      child: CircularProgressIndicator(),
-                    );
+                    return Center(child: CircularProgressIndicator());
                   }
 
                   if (snapshot.hasError) {
                     debugPrint(snapshot.error.toString());
 
-                    return Center(
-                      child: Text(snapshot.error.toString()),
-                    );
+                    return Center(child: Text(snapshot.error.toString()));
                   }
 
                   if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-                    return const Center(
-                      child: Text("No activities yet."),
-                    );
+                    return Center(child: Text("No activities yet."));
                   }
 
                   final docs = snapshot.data!.docs;
 
                   return GridView.builder(
                     itemCount: docs.length,
-                    gridDelegate:
-                        const SliverGridDelegateWithFixedCrossAxisCount(
+                    gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
                       crossAxisCount: 2,
                       mainAxisSpacing: 14,
                       crossAxisSpacing: 14,
@@ -133,17 +118,16 @@ class _ExchPrgrmScreenState extends State<ExchPrgrmScreen> {
                           Navigator.push(
                             context,
                             MaterialPageRoute(
-                              builder: (_) => ActivityDetailsScreen(
-                                activity: activity,
-                              ),
+                              builder: (_) =>
+                                  ActivityDetailsScreen(activity: activity),
                             ),
                           );
                         },
                         child: Container(
                           decoration: BoxDecoration(
                             borderRadius: BorderRadius.circular(18),
-                            color: Colors.white,
-                            boxShadow: const [
+                            color: Theme.of(context).colorScheme.surface,
+                            boxShadow: [
                               BoxShadow(
                                 blurRadius: 6,
                                 color: Colors.black26,
@@ -152,7 +136,7 @@ class _ExchPrgrmScreenState extends State<ExchPrgrmScreen> {
                             ],
                           ),
                           child: Padding(
-                            padding: const EdgeInsets.all(12),
+                            padding: EdgeInsets.all(12),
                             child: Column(
                               mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                               children: [
@@ -169,30 +153,36 @@ class _ExchPrgrmScreenState extends State<ExchPrgrmScreen> {
                                           height: 80,
                                           width: 80,
                                           color: Colors.grey.shade300,
-                                          child: const Icon(Icons.image),
+                                          child: Icon(Icons.image),
                                         ),
                                 ),
                                 Text(
                                   title,
                                   textAlign: TextAlign.center,
-                                  style: const TextStyle(
-                                    color: Color(0xff84d6fe),
+                                  style: TextStyle(
+                                    color:
+                                        Theme.of(context).colorScheme.primary,
                                     fontWeight: FontWeight.bold,
                                     fontSize: 15,
                                   ),
                                 ),
                                 Container(
-                                  padding: const EdgeInsets.symmetric(
+                                  padding: EdgeInsets.symmetric(
                                     horizontal: 14,
                                     vertical: 7,
                                   ),
                                   decoration: BoxDecoration(
-                                    color: const Color(0xff84d6fe),
+                                    color:
+                                        Theme.of(context).colorScheme.primary,
                                     borderRadius: BorderRadius.circular(30),
                                   ),
-                                  child: const Text(
+                                  child: Text(
                                     "More Info",
-                                    style: TextStyle(color: Colors.black),
+                                    style: TextStyle(
+                                      color: Theme.of(context)
+                                          .colorScheme
+                                          .onPrimary,
+                                    ),
                                   ),
                                 ),
                               ],
@@ -206,23 +196,26 @@ class _ExchPrgrmScreenState extends State<ExchPrgrmScreen> {
               ),
             ),
             TextButton(
-                onPressed: () async {
-                  final Uri url = Uri.parse("https://www.snow.day/");
-                  if (await canLaunchUrl(url)) {
-                    await launchUrl(url, mode: LaunchMode.externalApplication);
-                  }
-                },
-                child: const Column(
-                  children: [
-                    SizedBox(height: 8),
-                    Text("For more programs click here",
-                        style: TextStyle(
-                          color: Color(0xff84d6fe),
-                          fontWeight: FontWeight.bold,
-                          fontSize: 14,
-                        ))
-                  ],
-                )),
+              onPressed: () async {
+                final Uri url = Uri.parse("https://www.snow.day/");
+                if (await canLaunchUrl(url)) {
+                  await launchUrl(url, mode: LaunchMode.externalApplication);
+                }
+              },
+              child: Column(
+                children: [
+                  SizedBox(height: 8),
+                  Text(
+                    "For more programs click here",
+                    style: TextStyle(
+                      color: Theme.of(context).colorScheme.primary,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 14,
+                    ),
+                  ),
+                ],
+              ),
+            ),
           ],
         ),
       ),

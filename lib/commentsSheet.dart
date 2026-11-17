@@ -1,7 +1,11 @@
+import 'app_ui.dart';
+
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+
 import 'dart:async';
+
 import 'userprofile.dart';
 
 class CommentsSheet extends StatefulWidget {
@@ -17,6 +21,7 @@ class _CommentsSheetState extends State<CommentsSheet> {
   final TextEditingController _commentCtrl = TextEditingController();
 
   bool _isOrganizer = false;
+  bool _isSending = false;
 
   CollectionReference get _commentsRef => FirebaseFirestore.instance
       .collection("posts")
@@ -52,10 +57,12 @@ class _CommentsSheetState extends State<CommentsSheet> {
   }
 
   Future<void> _addComment() async {
+    if (_isSending) return;
     final user = FirebaseAuth.instance.currentUser;
     if (user == null || _commentCtrl.text.trim().isEmpty) return;
 
     final commentText = _commentCtrl.text.trim();
+    setState(() => _isSending = true);
 
     try {
       final userDoc = await FirebaseFirestore.instance
@@ -88,13 +95,15 @@ class _CommentsSheetState extends State<CommentsSheet> {
         "commentsCount": FieldValue.increment(1),
       }, SetOptions(merge: true));
 
-      if (mounted) _commentCtrl.clear();
+      if (mounted && _commentCtrl.text.trim() == commentText)
+        {_commentCtrl.clear();}
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text("Failed to add comment: $e")),
-        );
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text("Failed to add comment: $e")));
       }
+    } finally {
+      if (mounted) setState(() => _isSending = false);
     }
   }
 
@@ -146,9 +155,9 @@ class _CommentsSheetState extends State<CommentsSheet> {
       });
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text("Failed to edit comment: $e")),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text("Failed to edit comment: $e")));
       }
     }
   }
@@ -159,9 +168,7 @@ class _CommentsSheetState extends State<CommentsSheet> {
       builder: (dialogContext) {
         return AlertDialog(
           title: const Text("Delete comment?"),
-          content: const Text(
-            "Are you sure you want to delete this comment?",
-          ),
+          content: const Text("Are you sure you want to delete this comment?"),
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(dialogContext, false),
@@ -169,10 +176,7 @@ class _CommentsSheetState extends State<CommentsSheet> {
             ),
             TextButton(
               onPressed: () => Navigator.pop(dialogContext, true),
-              child: const Text(
-                "Delete",
-                style: TextStyle(color: Colors.red),
-              ),
+              child: const Text("Delete", style: TextStyle(color: Colors.red)),
             ),
           ],
         );
@@ -199,9 +203,9 @@ class _CommentsSheetState extends State<CommentsSheet> {
       });
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text("Failed to delete comment: $e")),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text("Failed to delete comment: $e")));
       }
     }
   }
@@ -222,10 +226,7 @@ class _CommentsSheetState extends State<CommentsSheet> {
               const SizedBox(height: 12),
               const Text(
                 "Comments",
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                ),
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
               ),
               const Divider(),
               Expanded(
@@ -235,23 +236,17 @@ class _CommentsSheetState extends State<CommentsSheet> {
                       .snapshots(),
                   builder: (context, snapshot) {
                     if (snapshot.hasError) {
-                      return Center(
-                        child: Text("Error: ${snapshot.error}"),
-                      );
+                      return Center(child: Text("Error: ${snapshot.error}"));
                     }
 
                     if (snapshot.connectionState == ConnectionState.waiting) {
-                      return const Center(
-                        child: CircularProgressIndicator(),
-                      );
+                      return const Center(child: CircularProgressIndicator());
                     }
 
                     final comments = snapshot.data!.docs;
 
                     if (comments.isEmpty) {
-                      return const Center(
-                        child: Text("No comments yet"),
-                      );
+                      return const Center(child: Text("No comments yet"));
                     }
 
                     return ListView.builder(
@@ -357,12 +352,18 @@ class _CommentsSheetState extends State<CommentsSheet> {
                                         value: "delete",
                                         child: Row(
                                           children: [
-                                            Icon(Icons.delete,
-                                                color: Colors.red, size: 18),
+                                            Icon(
+                                              Icons.delete,
+                                              color: Colors.red,
+                                              size: 18,
+                                            ),
                                             SizedBox(width: 8),
-                                            Text("Delete",
-                                                style: TextStyle(
-                                                    color: Colors.red)),
+                                            Text(
+                                              "Delete",
+                                              style: TextStyle(
+                                                color: Colors.red,
+                                              ),
+                                            ),
                                           ],
                                         ),
                                       ),
@@ -393,8 +394,11 @@ class _CommentsSheetState extends State<CommentsSheet> {
                     ),
                     const SizedBox(width: 8),
                     IconButton(
-                      onPressed: _addComment,
-                      icon: const Icon(Icons.send),
+                      onPressed: _isSending ? null : _addComment,
+                      tooltip: 'Send comment',
+                      icon: _isSending
+                          ? const BusyIndicator()
+                          : const Icon(Icons.send),
                     ),
                   ],
                 ),

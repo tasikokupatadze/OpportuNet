@@ -1,6 +1,9 @@
+import 'app_ui.dart';
+
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+
 import 'dart:async';
 
 class CreatePost extends StatefulWidget {
@@ -31,9 +34,7 @@ class _CreatePostState extends State<CreatePost> {
 
     if (text.isEmpty || user == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text("Write something before posting"),
-        ),
+        const SnackBar(content: Text("Write something before posting")),
       );
       return;
     }
@@ -88,11 +89,8 @@ class _CreatePostState extends State<CreatePost> {
       if (!mounted) return;
       Navigator.pop(context);
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text("Failed to post: $e"),
-        ),
-      );
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text("Failed to post: $e")));
     } finally {
       if (mounted) {
         setState(() {
@@ -120,125 +118,131 @@ class _CreatePostState extends State<CreatePost> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
-        title: Image.asset(
-          'assets/opportunet1.png',
-          height: 60,
-        ),
+        title: Image.asset('assets/opportunet1.png', height: 60),
         centerTitle: true,
       ),
-      body: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: const [
-                CircleAvatar(
-                  radius: 24,
-                  backgroundColor: Color(0xff84d6fe),
-                  child: Icon(
-                    Icons.person,
-                    color: Colors.white,
-                    size: 28,
-                  ),
-                ),
-                SizedBox(width: 12),
-                Text(
-                  "Share something",
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.black,
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 20),
-            DropdownButtonFormField<String>(
-              initialValue: _selectedCategory,
-              decoration: InputDecoration(
-                labelText: 'Post category',
-                prefixIcon: const Icon(
-                  Icons.category_outlined,
-                  color: Color(0xff2b88b4),
-                ),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(14),
-                ),
-              ),
-              items: _categories.map((category) {
-                return DropdownMenuItem<String>(
-                  value: category,
-                  child: Text(category),
-                );
-              }).toList(),
-              onChanged: (value) {
-                if (value != null) {
-                  setState(() {
-                    _selectedCategory = value;
-                  });
-                }
-              },
-            ),
-            const SizedBox(height: 16),
-            Expanded(
-              child: Container(
-                padding: const EdgeInsets.all(14),
-                decoration: BoxDecoration(
-                  color: Colors.grey.shade100,
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: Colors.grey.shade300),
-                ),
-                child: TextField(
-                  controller: controller,
-                  maxLines: null,
-                  expands: true,
-                  textAlignVertical: TextAlignVertical.top,
-                  decoration: const InputDecoration(
-                    hintText: "Write something...",
-                    border: InputBorder.none,
-                  ),
-                  style: const TextStyle(
-                    fontSize: 16,
-                    color: Colors.black,
-                  ),
-                ),
-              ),
-            ),
-            const SizedBox(height: 16),
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton(
-                onPressed: _isPosting ? null : uploadPost,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xff84d6fe),
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(vertical: 14),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(14),
-                  ),
-                ),
-                child: _isPosting
-                    ? const SizedBox(
-                        height: 22,
-                        width: 22,
-                        child: CircularProgressIndicator(
-                          color: Colors.white,
-                          strokeWidth: 2,
+      body: SafeArea(
+        top: false,
+        child: ContentWidth(
+          maxWidth: 760,
+          child: LayoutBuilder(
+              builder: (context, constraints) => SingleChildScrollView(
+                    padding: const EdgeInsets.all(16),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            CircleAvatar(
+                              radius: 24,
+                              backgroundColor: Color(0xff84d6fe),
+                              child:
+                                  Icon(Icons.person, color: brandInk, size: 28),
+                            ),
+                            SizedBox(width: 12),
+                            Text(
+                              "Share something",
+                              style: TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                                color: Theme.of(context).colorScheme.onSurface,
+                              ),
+                            ),
+                          ],
                         ),
-                      )
-                    : const Text(
-                        "Post",
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
+                        const SizedBox(height: 20),
+                        DropdownButtonFormField<String>(
+                          initialValue: _selectedCategory,
+                          decoration: InputDecoration(
+                            labelText: 'Post category',
+                            prefixIcon: const Icon(
+                              Icons.category_outlined,
+                              color: Color(0xff2b88b4),
+                            ),
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(14),
+                            ),
+                          ),
+                          items: _categories.map((category) {
+                            return DropdownMenuItem<String>(
+                              value: category,
+                              child: Text(category),
+                            );
+                          }).toList(),
+                          onChanged: (value) {
+                            if (value != null) {
+                              setState(() {
+                                _selectedCategory = value;
+                              });
+                            }
+                          },
                         ),
-                      ),
-              ),
-            ),
-          ],
+                        const SizedBox(height: 16),
+                        SizedBox(
+                          height: (constraints.maxHeight - 260)
+                              .clamp(180.0, 600.0)
+                              .toDouble(),
+                          child: Container(
+                            padding: const EdgeInsets.all(14),
+                            decoration: BoxDecoration(
+                              color: Theme.of(context)
+                                  .colorScheme
+                                  .surfaceContainerHighest,
+                              borderRadius: BorderRadius.circular(16),
+                              border: Border.all(color: Colors.grey.shade300),
+                            ),
+                            child: TextField(
+                              controller: controller,
+                              maxLines: null,
+                              expands: true,
+                              textAlignVertical: TextAlignVertical.top,
+                              decoration: const InputDecoration(
+                                hintText: "Write something...",
+                                border: InputBorder.none,
+                              ),
+                              style: TextStyle(
+                                fontSize: 16,
+                                color: Theme.of(context).colorScheme.onSurface,
+                              ),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                        SizedBox(
+                          width: double.infinity,
+                          child: ElevatedButton(
+                            onPressed: _isPosting ? null : uploadPost,
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: const Color(0xff84d6fe),
+                              foregroundColor: brandInk,
+                              padding: const EdgeInsets.symmetric(vertical: 14),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(14),
+                              ),
+                            ),
+                            child: _isPosting
+                                ? const SizedBox(
+                                    height: 22,
+                                    width: 22,
+                                    child: CircularProgressIndicator(
+                                      color: brandInk,
+                                      strokeWidth: 2,
+                                    ),
+                                  )
+                                : const Text(
+                                    "Post",
+                                    style: TextStyle(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  )),
         ),
       ),
     );

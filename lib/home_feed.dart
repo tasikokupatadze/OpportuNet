@@ -1,7 +1,11 @@
+import 'app_ui.dart';
+
 import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+
 import 'calendar.dart';
 import 'activitydetails.dart';
 import 'roadmaps.dart';
@@ -34,24 +38,36 @@ const Map<String, IconData> kSubjectIcons = {
 
 Stream<List<Map<String, dynamic>>> _allOpportunities() {
   final latest = <String, List<Map<String, dynamic>>>{};
+  final failures = <String, Object>{};
   late final StreamController<List<Map<String, dynamic>>> ctrl;
   final subs = <StreamSubscription>[];
 
-  void emit() => ctrl.add(latest.values.expand((l) => l).toList());
+  void emit() {
+    if (failures.isNotEmpty) {
+      ctrl.addError(failures.values.first);
+    } else if (latest.length == kCategories.length) {
+      ctrl.add(latest.values.expand((list) => list).toList());
+    }
+  }
 
   ctrl = StreamController(
     onListen: () {
       for (final name in kCategories.keys) {
-        subs.add(FirebaseFirestore.instance.collection(name).snapshots().listen(
+        subs.add(
+          FirebaseFirestore.instance.collection(name).snapshots().listen(
             (snap) {
-          latest[name] = snap.docs
-              .map((d) => {...d.data(), kCategoryField: name})
-              .toList();
-          emit();
-        }, onError: (_) {
-          latest[name] = [];
-          emit();
-        }));
+              failures.remove(name);
+              latest[name] = snap.docs
+                  .map((d) => {...d.data(), kCategoryField: name})
+                  .toList();
+              emit();
+            },
+            onError: (Object error, StackTrace stack) {
+              failures[name] = error;
+              emit();
+            },
+          ),
+        );
       }
     },
     onCancel: () {
@@ -100,7 +116,7 @@ String _subject(Map<String, dynamic> d) {
     "biology olympiad": "biology",
     "computer science": "informatics",
     "informatics olympiad": "informatics",
-    "robotics olympiad": "robotics"
+    "robotics olympiad": "robotics",
   };
 
   return aliases[normalized] ?? normalized;
@@ -118,10 +134,16 @@ DateTime? _date(dynamic v) {
 
 bool _isFree(String cost) {
   final c = cost.toLowerCase().trim();
-  return c.isEmpty || c == "0" || c.contains("free");
+  return c == '0' ||
+      c == '0.0' ||
+      c == '0.00' ||
+      c == 'free' ||
+      c == 'free of charge' ||
+      c == 'no cost';
 }
 
 double _costValue(String cost) {
+  if (cost.trim().isEmpty) return double.infinity;
   if (_isFree(cost)) return 0;
   final m = RegExp(r'\d+(\.\d+)?').firstMatch(cost.replaceAll(",", ""));
   return m == null ? double.infinity : double.parse(m.group(0)!);
@@ -141,7 +163,7 @@ class HomeFeed extends StatefulWidget {
 class _HomeFeedState extends State<HomeFeed> {
   final _searchCtrl = TextEditingController();
   String _query = "";
-  late final Stream<List<Map<String, dynamic>>> _stream = _allOpportunities();
+  late Stream<List<Map<String, dynamic>>> _stream = _allOpportunities();
   final Set<String> _categories = {};
   final Set<String> _subjects = {};
   CostFilter _cost = CostFilter.any;
@@ -199,8 +221,10 @@ class _HomeFeedState extends State<HomeFeed> {
       d["requirements"],
     ].where((v) => v != null).join(" ").toLowerCase();
 
-    final normalizedQuery =
-        _query.toLowerCase().trim().replaceAll(RegExp(r'\s+'), ' ');
+    final normalizedQuery = _query.toLowerCase().trim().replaceAll(
+          RegExp(r'\s+'),
+          ' ',
+        );
 
     if (normalizedQuery.isNotEmpty &&
         !searchableText.contains(normalizedQuery)) {
@@ -214,7 +238,8 @@ class _HomeFeedState extends State<HomeFeed> {
     }
 
     if (_cost == CostFilter.free && !_isFree(cost)) return false;
-    if (_cost == CostFilter.paid && _isFree(cost)) return false;
+    if (_cost == CostFilter.paid && (cost.trim().isEmpty || _isFree(cost)))
+      {return false;}
 
     if (_myAge != null && !_ageFits(age, _myAge!)) return false;
 
@@ -236,8 +261,9 @@ class _HomeFeedState extends State<HomeFeed> {
       case SortBy.deadline:
         final now = DateTime.now();
         DateTime? dl(Map d) {
-          final v =
-              _date(d["deadline"] ?? d["registrationDeadline"] ?? d["date"]);
+          final v = _date(
+            d["deadline"] ?? d["registrationDeadline"] ?? d["date"],
+          );
           return (v != null && v.isAfter(now)) ? v : null;
         }
         items.sort((a, b) {
@@ -248,13 +274,16 @@ class _HomeFeedState extends State<HomeFeed> {
           return da.compareTo(db);
         });
       case SortBy.title:
-        items.sort((a, b) => (a["title"] ?? "")
-            .toString()
-            .toLowerCase()
-            .compareTo((b["title"] ?? "").toString().toLowerCase()));
+        items.sort(
+          (a, b) => (a["title"] ?? "").toString().toLowerCase().compareTo(
+                (b["title"] ?? "").toString().toLowerCase(),
+              ),
+        );
       case SortBy.cheapest:
-        items.sort((a, b) => _costValue((a["cost"] ?? "").toString())
-            .compareTo(_costValue((b["cost"] ?? "").toString())));
+        items.sort(
+          (a, b) => _costValue((a["cost"] ?? "").toString())
+              .compareTo(_costValue((b["cost"] ?? "").toString())),
+        );
     }
   }
 
@@ -283,65 +312,72 @@ class _HomeFeedState extends State<HomeFeed> {
     final dark = Theme.of(context).brightness == Brightness.dark;
     final surface = dark ? const Color(0xff1e2228) : const Color(0xfff3f6f9);
 
-    return Column(
-      children: [
-        ClipRect(
-          child: AnimatedAlign(
-            duration: const Duration(milliseconds: 220),
-            curve: Curves.easeOut,
-            alignment: Alignment.bottomCenter,
-            heightFactor: _showSearch ? 1 : 0,
-            child: AnimatedOpacity(
-              duration: const Duration(milliseconds: 180),
-              opacity: _showSearch ? 1 : 0,
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  _topButtons(),
-                  _searchRow(surface),
-                  _categoryChips(),
-                ],
+    return ContentWidth(
+      child: Column(
+        children: [
+          ClipRect(
+            child: AnimatedAlign(
+              duration: const Duration(milliseconds: 220),
+              curve: Curves.easeOut,
+              alignment: Alignment.bottomCenter,
+              heightFactor: _showSearch ? 1 : 0,
+              child: AnimatedOpacity(
+                duration: const Duration(milliseconds: 180),
+                opacity: _showSearch ? 1 : 0,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    _topButtons(),
+                    _searchRow(surface),
+                    _categoryChips(),
+                  ],
+                ),
               ),
             ),
           ),
-        ),
 
-        // Feed
-        Expanded(
-          child: StreamBuilder<List<Map<String, dynamic>>>(
-            stream: _stream,
-            builder: (context, snap) {
-              if (snap.hasError) {
-                return const Center(child: Text("Couldn't load opportunities"));
-              }
-              if (!snap.hasData) {
-                return const Center(child: CircularProgressIndicator());
-              }
-              final items = snap.data!.where(_matches).toList();
-              _sortItems(items);
+          // Feed
+          Expanded(
+            child: StreamBuilder<List<Map<String, dynamic>>>(
+              stream: _stream,
+              builder: (context, snap) {
+                if (snap.hasError) {
+                  return LoadError(
+                    message:
+                        "Couldn't load opportunities. Check your connection and try again.",
+                    onRetry: () =>
+                        setState(() => _stream = _allOpportunities()),
+                  );
+                }
+                if (!snap.hasData) {
+                  return const Center(child: CircularProgressIndicator());
+                }
+                final items = snap.data!.where(_matches).toList();
+                _sortItems(items);
 
-              if (items.isEmpty) return _emptyState();
+                if (items.isEmpty) return _emptyState();
 
-              return NotificationListener<UserScrollNotification>(
-                onNotification: _onScroll,
-                child: CustomScrollView(
-                  slivers: [
-                    SliverPadding(
-                      padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
-                      sliver: SliverToBoxAdapter(
-                        child: _feedHeader(items.length, dark),
+                return NotificationListener<UserScrollNotification>(
+                  onNotification: _onScroll,
+                  child: CustomScrollView(
+                    slivers: [
+                      SliverPadding(
+                        padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+                        sliver: SliverToBoxAdapter(
+                          child: _feedHeader(items.length, dark),
+                        ),
                       ),
-                    ),
-                    _layout == FeedLayout.grid
-                        ? _gridSliver(items)
-                        : _centeredSliver(items),
-                  ],
-                ),
-              );
-            },
+                      _layout == FeedLayout.grid
+                          ? _gridSliver(items)
+                          : _centeredSliver(items),
+                    ],
+                  ),
+                );
+              },
+            ),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 
@@ -355,7 +391,7 @@ class _HomeFeedState extends State<HomeFeed> {
             children: [
               Expanded(
                 child: SizedBox(
-                  height: 45,
+                  // Let labels grow with text scaling.
                   child: ElevatedButton.icon(
                     style: OutlinedButton.styleFrom(
                       foregroundColor: _brandDark,
@@ -387,7 +423,7 @@ class _HomeFeedState extends State<HomeFeed> {
               const SizedBox(width: 10),
               Expanded(
                 child: SizedBox(
-                  height: 45,
+                  // Let labels grow with text scaling.
                   child: OutlinedButton.icon(
                     style: OutlinedButton.styleFrom(
                       foregroundColor: _brandDark,
@@ -399,9 +435,7 @@ class _HomeFeedState extends State<HomeFeed> {
                     ),
                     onPressed: () => Navigator.push(
                       context,
-                      MaterialPageRoute(
-                        builder: (_) => const RoadmapScreen(),
-                      ),
+                      MaterialPageRoute(builder: (_) => const RoadmapScreen()),
                     ),
                     icon: const Icon(Icons.route_rounded, size: 20),
                     label: const Text(
@@ -422,7 +456,7 @@ class _HomeFeedState extends State<HomeFeed> {
           if (widget.isOrganizer) ...[
             const SizedBox(height: 10),
             SizedBox(
-              height: 45,
+              // Let labels grow with text scaling.
               child: ElevatedButton.icon(
                 onPressed: () {
                   Navigator.push(
@@ -435,10 +469,7 @@ class _HomeFeedState extends State<HomeFeed> {
                 icon: const Icon(Icons.add),
                 label: const Text(
                   "Add Extracurricular",
-                  style: TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 15,
-                  ),
+                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
                 ),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: _brand,
@@ -497,7 +528,8 @@ class _HomeFeedState extends State<HomeFeed> {
                 foregroundColor: Colors.black87,
                 fixedSize: const Size(48, 48),
                 shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(14)),
+                  borderRadius: BorderRadius.circular(14),
+                ),
               ),
               tooltip: "Filters & sort",
               icon: const Icon(Icons.tune_rounded),
@@ -576,24 +608,43 @@ class _HomeFeedState extends State<HomeFeed> {
 
   // Layout 1: two activities side by side.
   Widget _gridSliver(List<Map<String, dynamic>> items) {
-    return SliverPadding(
-      padding: const EdgeInsets.fromLTRB(16, 4, 16, 24),
-      sliver: SliverGrid(
-        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-          crossAxisCount: 2,
-          mainAxisSpacing: 12,
-          crossAxisSpacing: 12,
-          mainAxisExtent: 210,
-        ),
-        delegate: SliverChildBuilderDelegate(
-          (_, i) => _OpportunityCard(data: items[i], big: false),
-          childCount: items.length,
-        ),
-      ),
+    return SliverLayoutBuilder(
+      builder: (context, constraints) {
+        final scale = MediaQuery.textScalerOf(context).scale(14) / 14;
+        final columns =
+            (constraints.crossAxisExtent / (scale > 1.3 ? 300 : 245))
+                .floor()
+                .clamp(1, 4)
+                .toInt();
+        final rows = <Widget>[];
+        for (var i = 0; i < items.length; i += columns) {
+          rows.add(
+            Padding(
+              padding: const EdgeInsets.only(bottom: 12),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  for (var j = 0; j < columns; j++) ...[
+                    if (j > 0) const SizedBox(width: 12),
+                    Expanded(
+                      child: i + j < items.length
+                          ? OpportunityCard(data: items[i + j], big: false)
+                          : const SizedBox.shrink(),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+          );
+        }
+        return SliverPadding(
+          padding: const EdgeInsets.fromLTRB(16, 4, 16, 24),
+          sliver: SliverList(delegate: SliverChildListDelegate(rows)),
+        );
+      },
     );
   }
 
-  // Layout 2: one slightly bigger activity per row, centered.
   Widget _centeredSliver(List<Map<String, dynamic>> items) {
     return SliverPadding(
       padding: const EdgeInsets.fromLTRB(16, 4, 16, 24),
@@ -602,11 +653,8 @@ class _HomeFeedState extends State<HomeFeed> {
         separatorBuilder: (_, __) => const SizedBox(height: 14),
         itemBuilder: (_, i) => Center(
           child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 300),
-            child: SizedBox(
-              height: 250,
-              child: _OpportunityCard(data: items[i], big: true),
-            ),
+            constraints: const BoxConstraints(maxWidth: 520),
+            child: OpportunityCard(data: items[i], big: true),
           ),
         ),
       ),
@@ -622,8 +670,11 @@ class _HomeFeedState extends State<HomeFeed> {
     return Padding(
       padding: const EdgeInsets.only(right: 8),
       child: FilterChip(
-        avatar:
-            Icon(icon, size: 18, color: selected ? Colors.black87 : _brandDark),
+        avatar: Icon(
+          icon,
+          size: 18,
+          color: selected ? Colors.black87 : _brandDark,
+        ),
         label: Text(label),
         selected: selected,
         showCheckmark: false,
@@ -649,8 +700,12 @@ class _HomeFeedState extends State<HomeFeed> {
           children: [
             const Icon(Icons.search_off_rounded, size: 56, color: _brandDark),
             const SizedBox(height: 12),
-            const Text("Nothing matches your filters",
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
+            Text(
+              _hasFilters || _query.isNotEmpty
+                  ? "Nothing matches your filters"
+                  : "No opportunities yet",
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
+            ),
             const SizedBox(height: 12),
             if (_hasFilters || _query.isNotEmpty)
               TextButton(onPressed: _clearAll, child: const Text("Clear all")),
@@ -681,9 +736,10 @@ class _HomeFeedState extends State<HomeFeed> {
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text("Filters",
-                      style:
-                          TextStyle(fontSize: 20, fontWeight: FontWeight.w800)),
+                  const Text(
+                    "Filters",
+                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800),
+                  ),
                   const SizedBox(height: 20),
 
                   // Sort by
@@ -742,9 +798,13 @@ class _HomeFeedState extends State<HomeFeed> {
                     segments: const [
                       ButtonSegment(value: CostFilter.any, label: Text("Any")),
                       ButtonSegment(
-                          value: CostFilter.free, label: Text("Free")),
+                        value: CostFilter.free,
+                        label: Text("Free"),
+                      ),
                       ButtonSegment(
-                          value: CostFilter.paid, label: Text("Paid")),
+                        value: CostFilter.paid,
+                        label: Text("Paid"),
+                      ),
                     ],
                     selected: {_cost},
                     onSelectionChanged: (s) => update(() => _cost = s.first),
@@ -797,8 +857,9 @@ class _HomeFeedState extends State<HomeFeed> {
                       ),
                       const Spacer(),
                       FilledButton(
-                        style:
-                            FilledButton.styleFrom(backgroundColor: _brandDark),
+                        style: FilledButton.styleFrom(
+                          backgroundColor: _brandDark,
+                        ),
                         onPressed: () => Navigator.pop(ctx),
                         child: const Text("Show results"),
                       ),
@@ -815,10 +876,10 @@ class _HomeFeedState extends State<HomeFeed> {
 }
 
 // ---------- One compact item in the feed: logo + title + key tags ----------
-class _OpportunityCard extends StatelessWidget {
+class OpportunityCard extends StatelessWidget {
   final Map<String, dynamic> data;
   final bool big; // true in the centered layout
-  const _OpportunityCard({required this.data, required this.big});
+  const OpportunityCard({super.key, required this.data, required this.big});
 
   @override
   Widget build(BuildContext context) {
@@ -837,12 +898,17 @@ class _OpportunityCard extends StatelessWidget {
       if (section == "olympiads" && subject.isNotEmpty)
         (
           kSubjectIcons[subject.toLowerCase()] ?? Icons.school_rounded,
-          _capitalize(subject)
+          _capitalize(subject),
         ),
       if (section == "exchange" && duration.isNotEmpty)
         (Icons.schedule_rounded, duration),
       if (age.isNotEmpty) (Icons.person_outline_rounded, age),
-      (Icons.payments_outlined, _isFree(cost) ? "Free" : cost),
+      (
+        Icons.payments_outlined,
+        cost.trim().isEmpty
+            ? "Cost not specified"
+            : (_isFree(cost) ? "Free" : cost),
+      ),
     ].take(3).toList();
 
     final cardColor = dark ? const Color(0xff1e2228) : Colors.white;
@@ -857,13 +923,15 @@ class _OpportunityCard extends StatelessWidget {
         onTap: () => Navigator.push(
           context,
           MaterialPageRoute(
-              builder: (_) => ActivityDetailsScreen(activity: data)),
+            builder: (_) => ActivityDetailsScreen(activity: data),
+          ),
         ),
         child: Ink(
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(18),
             border: Border.all(
-                color: dark ? Colors.white10 : const Color(0xffe8ecf0)),
+              color: dark ? Colors.white10 : const Color(0xffe8ecf0),
+            ),
           ),
           child: Padding(
             padding: EdgeInsets.all(big ? 14 : 10),
@@ -871,7 +939,8 @@ class _OpportunityCard extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 // Logo
-                Expanded(
+                SizedBox(
+                  height: big ? 140 : 100,
                   child: Container(
                     width: double.infinity,
                     decoration: BoxDecoration(
@@ -891,8 +960,7 @@ class _OpportunityCard extends StatelessWidget {
                 SizedBox(height: big ? 10 : 8),
                 Text(
                   title,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
+                  maxLines: null,
                   style: TextStyle(
                     fontSize: big ? 15 : 13,
                     fontWeight: FontWeight.w800,
@@ -920,7 +988,7 @@ class _OpportunityCard extends StatelessWidget {
       );
 
   Widget _tag(IconData icon, String text, bool big) => Container(
-        constraints: BoxConstraints(maxWidth: big ? 160 : 120),
+        constraints: const BoxConstraints(maxWidth: 240),
         padding: EdgeInsets.symmetric(horizontal: big ? 8 : 6, vertical: 3),
         decoration: BoxDecoration(
           color: _brand.withValues(alpha: 0.18),
@@ -934,8 +1002,7 @@ class _OpportunityCard extends StatelessWidget {
             Flexible(
               child: Text(
                 text,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
+                softWrap: true,
                 style: TextStyle(
                   fontSize: big ? 11.5 : 10.5,
                   fontWeight: FontWeight.w600,

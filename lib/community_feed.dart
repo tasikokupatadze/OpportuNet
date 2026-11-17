@@ -60,9 +60,12 @@ class _CommunityFeedState extends State<CommunityFeed> {
       final data = d.data() as Map<String, dynamic>;
       final cat = (data["category"] ?? "General") as String;
       if (_category != "All" && cat.toLowerCase() != _category.toLowerCase()) {
-        return false;}
+        return false;
+      }
       if (_sort == FeedSort.saved &&
-          !(List.from(data["savedBy"] ?? []).contains(uid))) {return false;}
+          !(List.from(data["savedBy"] ?? []).contains(uid))) {
+        return false;
+      }
       if (q.isNotEmpty) {
         final hay =
             "${data["text"] ?? ""} ${data["username"] ?? ""}".toLowerCase();

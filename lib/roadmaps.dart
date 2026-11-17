@@ -152,7 +152,7 @@ class _RoadmapScreenState extends State<RoadmapScreen>
               Container(
                 padding: const EdgeInsets.all(9),
                 decoration: BoxDecoration(
-                  color: brand..withValues(alpha:0.18),
+                  color: brand..withValues(alpha: 0.18),
                   borderRadius: BorderRadius.circular(11),
                 ),
                 child: Icon(icon, color: brandDark, size: 21),
@@ -180,7 +180,7 @@ class _RoadmapScreenState extends State<RoadmapScreen>
                     height: 23,
                     alignment: Alignment.center,
                     decoration: BoxDecoration(
-                      color: brand..withValues(alpha:0.2),
+                      color: brand..withValues(alpha: 0.2),
                       shape: BoxShape.circle,
                     ),
                     child: Text(
