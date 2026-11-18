@@ -48,7 +48,7 @@ class DefaultFirebaseOptions {
 
   static const FirebaseOptions web = FirebaseOptions(
     apiKey: 'AIzaSyBvMBPRuIbJVianzAjo1rRKyFY8RfNaF_g',
-    appId: '1:150055874798:android:e1204fe46c5764171203ff',
+    appId: '1:150055874798:web:2333f51bf7c785b81203ff',
     messagingSenderId: '150055874798',
     projectId: 'opportunet-bd7b8',
     authDomain: 'opportunet-bd7b8.firebaseapp.com',

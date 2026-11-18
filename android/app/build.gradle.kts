@@ -43,6 +43,18 @@ android {
     }
 
     signingConfigs {
+            // CI restores a fixed debug keystore here so every build has the same
+            // SHA-1 (registered in Firebase for Google Sign-In). Without it Gradle
+            // may generate a new random debug key on each build.
+            val ciDebugKeystore = file("ci-debug.keystore")
+            if (ciDebugKeystore.exists()) {
+                getByName("debug") {
+                    storeFile = ciDebugKeystore
+                    storePassword = "android"
+                    keyAlias = "androiddebugkey"
+                    keyPassword = "android"
+                }
+            }
             create("release") {
                 if (keystorePropertiesFile.exists()) {
                     keyAlias = keystoreProperties["keyAlias"] as String

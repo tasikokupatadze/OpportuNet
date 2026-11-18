@@ -65,17 +65,39 @@ Future<void> linkGoogle() async {
     return;
   }
 
-  await handleNativeGoogleSignInInitialization();
-
-  final googleUser = await GoogleSignIn.instance.authenticate();
-  final idToken = googleUser.authentication.idToken;
-
-  if (idToken == null) {
-    throw FirebaseAuthException(code: 'google-id-token-missing');
+  final credential = await _nativeGoogleCredential();
+  if (credential == null) {
+    await user.linkWithProvider(GoogleAuthProvider());
+    return;
   }
-
-  final credential = GoogleAuthProvider.credential(idToken: idToken);
   await user.linkWithCredential(credential);
+}
+
+/// Gets a Google credential from the native Android/iOS account picker.
+///
+/// Returns null when the device can't show it (for example an Android
+/// device or emulator without Google Play services), so callers can fall
+/// back to Firebase's browser-based Google sign-in.
+Future<AuthCredential?> _nativeGoogleCredential() async {
+  try {
+    await handleNativeGoogleSignInInitialization();
+    final googleUser = await GoogleSignIn.instance.authenticate();
+    final idToken = googleUser.authentication.idToken;
+    if (idToken == null) {
+      throw FirebaseAuthException(
+        code: 'google-id-token-missing',
+        message: 'Google did not return an ID token.',
+      );
+    }
+    return GoogleAuthProvider.credential(idToken: idToken);
+  } on GoogleSignInException catch (e) {
+    if (e.code == GoogleSignInExceptionCode.providerConfigurationError ||
+        e.code == GoogleSignInExceptionCode.uiUnavailable) {
+      debugPrint('Native Google sign-in unavailable (${e.description}); using browser flow.');
+      return null;
+    }
+    rethrow;
+  }
 }
 
 Future<UserCredential?> signInWithEmailAutoLink(
@@ -119,23 +141,10 @@ Future<UserCredential?> handleGoogleAutoLink() async {
         GoogleAuthProvider(),
       );
     } else {
-      await handleNativeGoogleSignInInitialization();
-
-      final googleUser = await GoogleSignIn.instance.authenticate();
-      final idToken = googleUser.authentication.idToken;
-
-      if (idToken == null) {
-        throw FirebaseAuthException(
-          code: 'google-id-token-missing',
-          message: 'Google did not return an ID token.',
-        );
-      }
-
-      final credential = GoogleAuthProvider.credential(idToken: idToken);
-
-      userCredential = await FirebaseAuth.instance.signInWithCredential(
-        credential,
-      );
+      final credential = await _nativeGoogleCredential();
+      userCredential = credential == null
+          ? await FirebaseAuth.instance.signInWithProvider(GoogleAuthProvider())
+          : await FirebaseAuth.instance.signInWithCredential(credential);
     }
 
     final user = userCredential.user;
@@ -512,7 +521,22 @@ class _LoginScreenState extends State<LoginScreen> {
                                     content: Text(
                                       e.code == 'need-email-login'
                                           ? 'Log in with email/password first to link Google.'
-                                          : 'Google sign-in could not finish. Please try again.',
+                                          : 'Google sign-in could not finish (${e.code}). Please try again.',
+                                    ),
+                                  ),
+                                );
+                              } on GoogleSignInException catch (e) {
+                                debugPrint(
+                                  'GOOGLE SIGN-IN: ${e.code.name}: ${e.description} ${e.details ?? ''}',
+                                );
+                                if (!context.mounted) return;
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    duration: const Duration(seconds: 8),
+                                    content: Text(
+                                      e.code == GoogleSignInExceptionCode.canceled
+                                          ? 'Google sign-in was cancelled.'
+                                          : 'Google sign-in failed (${e.code.name}): ${e.description ?? 'unknown error'}',
                                     ),
                                   ),
                                 );

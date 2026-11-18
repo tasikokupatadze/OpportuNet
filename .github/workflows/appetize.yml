@@ -37,7 +37,9 @@ jobs:
           mkdir -p "$HOME/.android"
           printf '%s' "$ANDROID_DEBUG_KEYSTORE_BASE64" | base64 --decode > "$HOME/.android/debug.keystore"
           chmod 600 "$HOME/.android/debug.keystore"
-          keytool -list -keystore "$HOME/.android/debug.keystore" -storepass android -alias androiddebugkey > /dev/null
+          cp "$HOME/.android/debug.keystore" android/app/ci-debug.keystore
+          echo "Debug keystore SHA-1 (must be registered in Firebase):"
+          keytool -list -v -keystore android/app/ci-debug.keystore -storepass android -alias androiddebugkey | grep -E 'SHA1:|SHA-1:'
 
       - name: Install dependencies
         run: flutter pub get
@@ -62,7 +64,7 @@ jobs:
           name: opportunet-debug-apk
           path: build/app/outputs/flutter-apk/app-debug.apk
 
-      - name: Show uploaded APK signing fingerprints
+      - name: Check APK fingerprints against Google Sign-In config
         shell: bash
         run: |
           set -euo pipefail
@@ -76,7 +78,9 @@ jobs:
             echo "::error::apksigner was not found in Android SDK Build Tools."
             exit 1
           fi
-          "$opportunet_apksigner" verify --print-certs build/app/outputs/flutter-apk/app-debug.apk
+          "$opportunet_apksigner" verify --print-certs build/app/outputs/flutter-apk/app-debug.apk | tee apk-certs.txt
+          opportunet_sha1="$(grep -m1 'SHA-1 digest' apk-certs.txt | awk '{print $NF}')"
+          python3 .github/scripts/check_google_sign_in.py "$opportunet_sha1"
 
       - name: Upload APK to Appetize.io
         id: appetize
