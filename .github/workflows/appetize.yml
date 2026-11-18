@@ -2,7 +2,8 @@ name: Build Flutter and Upload to Appetize
 
 on:
   push:
-    branches: [ main ]
+    branches: [main]
+  workflow_dispatch:
 
 jobs:
   build-and-deploy:
@@ -23,14 +24,54 @@ jobs:
           flutter-version: '3.47.9'
           channel: 'stable'
 
+      - name: Restore Android debug signing key
+        env:
+          ANDROID_DEBUG_KEYSTORE_BASE64: ${{ secrets.ANDROID_DEBUG_KEYSTORE_BASE64 }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ -z "$ANDROID_DEBUG_KEYSTORE_BASE64" ]; then
+            echo "::error::Add the ANDROID_DEBUG_KEYSTORE_BASE64 repository secret before building."
+            exit 1
+          fi
+          mkdir -p "$HOME/.android"
+          printf '%s' "$ANDROID_DEBUG_KEYSTORE_BASE64" | base64 --decode > "$HOME/.android/debug.keystore"
+          chmod 600 "$HOME/.android/debug.keystore"
+          keytool -list -keystore "$HOME/.android/debug.keystore" -storepass android -alias androiddebugkey > /dev/null
+
       - name: Install dependencies
         run: flutter pub get
 
       - name: Create google-services.json
-        run: echo '${{ secrets.GOOGLE_SERVICES_JSON }}' > android/app/google-services.json
+        env:
+          GOOGLE_SERVICES_JSON: ${{ secrets.GOOGLE_SERVICES_JSON }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ -z "$GOOGLE_SERVICES_JSON" ]; then
+            echo "::error::The GOOGLE_SERVICES_JSON repository secret is missing."
+            exit 1
+          fi
+          printf '%s' "$GOOGLE_SERVICES_JSON" > android/app/google-services.json
 
       - name: Build Debug APK
         run: flutter build apk --debug --android-skip-build-dependency-validation
+
+      - name: Show uploaded APK signing fingerprints
+        shell: bash
+        run: |
+          set -euo pipefail
+          opportunet_android_sdk="${ANDROID_SDK_ROOT:-${ANDROID_HOME:-}}"
+          if [ -z "$opportunet_android_sdk" ]; then
+            echo "::error::Android SDK location is unavailable."
+            exit 1
+          fi
+          opportunet_apksigner="$(find "$opportunet_android_sdk/build-tools" -type f -name apksigner | sort -V | tail -n 1)"
+          if [ -z "$opportunet_apksigner" ]; then
+            echo "::error::apksigner was not found in Android SDK Build Tools."
+            exit 1
+          fi
+          "$opportunet_apksigner" verify --print-certs build/app/outputs/flutter-apk/app-debug.apk
 
       - name: Upload APK to Appetize.io
         id: appetize
@@ -41,4 +82,6 @@ jobs:
           appFile: build/app/outputs/flutter-apk/app-debug.apk
 
       - name: Print Appetize Preview Link
-        run: echo "Live App URL -> https://appetize.io/app/${{ steps.appetize.outputs.publicKey }}"
+        env:
+          APPETIZE_PUBLIC_KEY: ${{ steps.appetize.outputs.publicKey }}
+        run: printf 'Live App URL -> https://appetize.io/app/%s\n' "$APPETIZE_PUBLIC_KEY"
