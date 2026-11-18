@@ -56,6 +56,11 @@ jobs:
 
       - name: Build Debug APK
         run: flutter build apk --debug --android-skip-build-dependency-validation
+      - name: Save APK for testing
+        uses: actions/upload-artifact@v4
+        with:
+          name: opportunet-debug-apk
+          path: build/app/outputs/flutter-apk/app-debug.apk
 
       - name: Show uploaded APK signing fingerprints
         shell: bash
