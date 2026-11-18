@@ -182,7 +182,15 @@ class _CalendarScreenState extends State<CalendarScreen> {
 
   @override
   Widget build(BuildContext context) => Scaffold(
-        appBar: AppBar(title: const Text('Academic calendar')),
+        appBar: AppBar(
+  centerTitle: true,
+  title: Image.asset(
+    'assets/opportunet1.png',
+    height: 55,
+    fit: BoxFit.contain,
+    semanticLabel: 'OpportuNet',
+  ),
+),
         floatingActionButton: widget.isOrganizer
             ? FloatingActionButton(
                 onPressed: _addEvent,
