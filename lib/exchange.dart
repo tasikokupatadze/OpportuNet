@@ -209,4 +209,16 @@ class _ExchPrgrmScreenState extends State<ExchPrgrmScreen> {
                     "For more programs click here",
                     style: TextStyle(
                       color: Theme.of(context).colorScheme.primary,
-                 
+                      fontWeight: FontWeight.bold,
+                      fontSize: 14,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}

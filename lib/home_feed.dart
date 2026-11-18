@@ -10,6 +10,7 @@ import 'calendar.dart';
 import 'activitydetails.dart';
 import 'roadmaps.dart';
 import 'extracurriculars.dart';
+import 'schools.dart';
 
 const Map<String, (String, IconData)> kCategories = {
   "olympiads": ("Olympiads", Icons.emoji_events_rounded),
@@ -239,7 +240,7 @@ class _HomeFeedState extends State<HomeFeed> {
 
     if (_cost == CostFilter.free && !_isFree(cost)) return false;
     if (_cost == CostFilter.paid && (cost.trim().isEmpty || _isFree(cost)))
-      {return false;}
+      return false;
 
     if (_myAge != null && !_ageFits(age, _myAge!)) return false;
 
@@ -382,74 +383,79 @@ class _HomeFeedState extends State<HomeFeed> {
   }
 
   Widget _topButtons() {
+    final shortcutStyle = OutlinedButton.styleFrom(
+      backgroundColor: Colors.white,
+      foregroundColor: const Color(0xff17658b),
+      minimumSize: const Size(48, 48),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 12),
+      side: const BorderSide(color: _brand),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+      ),
+    );
+    const shortcutTextStyle =
+        TextStyle(fontSize: 16, fontWeight: FontWeight.bold);
+
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 14, 16, 8),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Row(
-            children: [
-              Expanded(
-                child: SizedBox(
-                  // Let labels grow with text scaling.
-                  child: ElevatedButton.icon(
-                    style: OutlinedButton.styleFrom(
-                      foregroundColor: _brandDark,
-                      padding: const EdgeInsets.symmetric(horizontal: 8),
-                      side: const BorderSide(color: _brand),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(16),
-                      ),
-                    ),
+          IntrinsicHeight(
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Expanded(
+                  child: OutlinedButton.icon(
+                    key: const ValueKey('home-schools-shortcut'),
+                    style: shortcutStyle,
                     onPressed: () => Navigator.push(
                       context,
-                      MaterialPageRoute(
-                        builder: (_) =>
-                            CalendarScreen(isOrganizer: widget.isOrganizer),
-                      ),
+                      MaterialPageRoute(builder: (_) => const SchoolScreen()),
                     ),
-                    icon: const Icon(Icons.calendar_month, size: 20),
+                    icon: const Icon(Icons.school_outlined, size: 20),
                     label: const Text(
-                      "Academic Calendar",
+                      'Best Schools in Georgia',
                       textAlign: TextAlign.center,
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                      ),
+                      style: shortcutTextStyle,
                     ),
                   ),
                 ),
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: SizedBox(
-                  // Let labels grow with text scaling.
+                const SizedBox(width: 10),
+                Expanded(
                   child: OutlinedButton.icon(
-                    style: OutlinedButton.styleFrom(
-                      foregroundColor: _brandDark,
-                      padding: const EdgeInsets.symmetric(horizontal: 8),
-                      side: const BorderSide(color: _brand),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(16),
-                      ),
-                    ),
+                    style: shortcutStyle,
                     onPressed: () => Navigator.push(
                       context,
                       MaterialPageRoute(builder: (_) => const RoadmapScreen()),
                     ),
                     icon: const Icon(Icons.route_rounded, size: 20),
                     label: const Text(
-                      "Roadmaps",
+                      'Roadmaps',
                       textAlign: TextAlign.center,
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                      ),
+                      style: shortcutTextStyle,
                     ),
                   ),
                 ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 10),
+          OutlinedButton.icon(
+            key: const ValueKey('home-calendar-shortcut'),
+            style: shortcutStyle,
+            onPressed: () => Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (_) => CalendarScreen(isOrganizer: widget.isOrganizer),
               ),
-            ],
+            ),
+            icon: const Icon(Icons.calendar_month, size: 20),
+            label: const Text(
+              'Academic Calendar',
+              textAlign: TextAlign.center,
+              style: shortcutTextStyle,
+            ),
           ),
 
           // Only organizers can see this button.
@@ -1013,4 +1019,3 @@ class OpportunityCard extends StatelessWidget {
         ),
       );
 }
-                                                              

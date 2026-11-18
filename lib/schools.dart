@@ -82,61 +82,24 @@ class _SchoolScreenState extends State<SchoolScreen> {
           maxWidth: 800,
           child: SingleChildScrollView(
             padding: const EdgeInsets.fromLTRB(16, 18, 16, 24),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.all(20),
-                  decoration: BoxDecoration(
-                    gradient: const LinearGradient(
-                      colors: [brandBlue, Color(0xffb6ebff)],
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                    ),
-                    borderRadius: BorderRadius.circular(24),
-                  ),
-                  child: const Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Icon(Icons.school_outlined, color: brandInk, size: 32),
-                      SizedBox(height: 14),
-                      Text('Best Schools in Georgia',
-                          style: TextStyle(
-                              fontSize: 26,
-                              fontWeight: FontWeight.bold,
-                              color: brandInk)),
-                      SizedBox(height: 8),
-                      Text(
-                        'Explore schools in the country of Georgia and visit their official websites to learn more.',
-                        style: TextStyle(
-                            fontSize: 14, height: 1.5, color: brandInk),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 20),
-                LayoutBuilder(builder: (context, constraints) {
-                  final textScale =
-                      MediaQuery.textScalerOf(context).scale(16) / 16;
-                  final minCardWidth = 240 * textScale.clamp(1.0, 1.5);
-                  final columns =
-                      ((constraints.maxWidth + 14) / (minCardWidth + 14))
-                          .floor()
-                          .clamp(1, 2);
-                  final cardWidth =
-                      (constraints.maxWidth - 14 * (columns - 1)) / columns;
-                  return Wrap(
-                    spacing: 14,
-                    runSpacing: 14,
-                    children: schools
-                        .map((school) => SizedBox(
-                            width: cardWidth, child: _schoolCard(school)))
-                        .toList(),
-                  );
-                }),
-              ],
-            ),
+            child: LayoutBuilder(builder: (context, constraints) {
+              final textScale = MediaQuery.textScalerOf(context).scale(16) / 16;
+              final minCardWidth = 240 * textScale.clamp(1.0, 1.5);
+              final columns =
+                  ((constraints.maxWidth + 14) / (minCardWidth + 14))
+                      .floor()
+                      .clamp(1, 2);
+              final cardWidth =
+                  (constraints.maxWidth - 14 * (columns - 1)) / columns;
+              return Wrap(
+                spacing: 14,
+                runSpacing: 14,
+                children: schools
+                    .map((school) =>
+                        SizedBox(width: cardWidth, child: _schoolCard(school)))
+                    .toList(),
+              );
+            }),
           ),
         ),
       ),

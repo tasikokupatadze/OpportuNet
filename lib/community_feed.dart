@@ -463,7 +463,7 @@ class _PinnedFilters extends SliverPersistentHeaderDelegate {
 class PostCard extends StatelessWidget {
   final QueryDocumentSnapshot post;
   final bool isOrganizer;
-  PostCard({super.key, required this.post, required this.isOrganizer});
+ const PostCard({super.key, required this.post, required this.isOrganizer});
 
   void _openProfile(BuildContext context, String uid) {
     if (uid.isEmpty) {
