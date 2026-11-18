@@ -6,7 +6,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'firebase_options.dart';
@@ -58,12 +58,14 @@ class NotificationService extends ChangeNotifier {
     FirebaseMessaging.onMessage.listen((message) {
       final context = notificationNavigatorKey.currentContext;
       if (_uid == null || !_enabled || !_wantsAlerts || context == null) return;
+      if (!context.mounted) return;
       final title = message.notification?.title ?? 'New OpportuNet update';
       ScaffoldMessenger.maybeOf(context)?.showSnackBar(SnackBar(
         content: Text(title),
         action:
             SnackBarAction(label: 'View', onPressed: () => _queueOpen(message)),
       ));
+      
     });
     FirebaseMessaging.onMessageOpenedApp.listen(_queueOpen);
     _messaging.onTokenRefresh.listen((token) async {

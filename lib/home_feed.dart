@@ -2,7 +2,7 @@ import 'app_ui.dart';
 
 import 'dart:async';
 
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter/rendering.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
@@ -240,7 +240,7 @@ class _HomeFeedState extends State<HomeFeed> {
 
     if (_cost == CostFilter.free && !_isFree(cost)) return false;
     if (_cost == CostFilter.paid && (cost.trim().isEmpty || _isFree(cost)))
-      return false;
+      {return false;}
 
     if (_myAge != null && !_ageFits(age, _myAge!)) return false;
 
@@ -885,7 +885,7 @@ class _HomeFeedState extends State<HomeFeed> {
 class OpportunityCard extends StatelessWidget {
   final Map<String, dynamic> data;
   final bool big; // true in the centered layout
-  const OpportunityCard({required this.data, required this.big});
+  const OpportunityCard({super.key, required this.data, required this.big});
 
   @override
   Widget build(BuildContext context) {
