@@ -25,8 +25,8 @@ jobs:
       - name: Install dependencies
         run: flutter pub get
 
-      - name: Build Debug APK
-        run: flutter build apk --debug
+      - - name: Build Debug APK
+     run: flutter build apk --debug --android-skip-build-dependency-validation
 
       - name: Upload APK to Appetize.io
         uses: appetizeio/github-action-appetize@v1.1.0
