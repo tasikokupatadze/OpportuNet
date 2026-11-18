@@ -1,0 +1,36 @@
+name: Build Flutter and Upload to Appetize
+
+on:
+  push:
+    branches: [ main ]
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: 'stable'
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Build Debug APK
+        run: flutter build apk --debug
+
+      - name: Upload APK to Appetize.io
+        uses: appetizeio/appetize-upload-action@v1
+        with:
+          api-token: ${{ secrets.APPETIZE_API_TOKEN }}
+          platform: android
+          file: build/app/outputs/flutter-apk/app-debug.apk
