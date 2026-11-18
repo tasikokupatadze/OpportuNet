@@ -29,8 +29,8 @@ jobs:
         run: flutter build apk --debug
 
       - name: Upload APK to Appetize.io
-        uses: appetizeio/appetize-upload-action@v1
+        uses: appetizeio/github-action-appetize@v1.1.0
         with:
-          api-token: ${{ secrets.APPETIZE_API_TOKEN }}
-          platform: android
-          file: build/app/outputs/flutter-apk/app-debug.apk
+          apiToken: ${{ secrets.APPETIZE_API_TOKEN }}
+          platform: 'android'
+          appFile: build/app/outputs/flutter-apk/app-debug.apk
