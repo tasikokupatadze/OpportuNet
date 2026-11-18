@@ -2,7 +2,7 @@ import 'dart:async';
 
 import 'package:flutter_test/flutter_test.dart';
 
-import '../lib/notification_task_queue.dart';
+import 'package:opportunet/notification_task_queue.dart';
 
 void main() {
   test('timing out registration cannot let logout cleanup overtake its write',
