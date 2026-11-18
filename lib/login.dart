@@ -512,7 +512,22 @@ class _LoginScreenState extends State<LoginScreen> {
                                     content: Text(
                                       e.code == 'need-email-login'
                                           ? 'Log in with email/password first to link Google.'
-                                          : 'Google sign-in could not finish. Please try again.',
+                                          : 'Google sign-in could not finish (${e.code}). Please try again.',
+                                    ),
+                                  ),
+                                );
+                              } on GoogleSignInException catch (e) {
+                                debugPrint(
+                                  'GOOGLE SIGN-IN: ${e.code.name}: ${e.description} ${e.details ?? ''}',
+                                );
+                                if (!context.mounted) return;
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    duration: const Duration(seconds: 8),
+                                    content: Text(
+                                      e.code == GoogleSignInExceptionCode.canceled
+                                          ? 'Google sign-in was cancelled.'
+                                          : 'Google sign-in failed (${e.code.name}): ${e.description ?? 'unknown error'}',
                                     ),
                                   ),
                                 );

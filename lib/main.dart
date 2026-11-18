@@ -43,7 +43,14 @@ void main() async {
 
   themeNotifier.value = isDarkMode ? ThemeMode.dark : ThemeMode.light;
 
-  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+  // On Android, use the Firebase app from google-services.json: it is the one
+  // registered for this package name and signing key, which Google Sign-In
+  // needs. The Dart android options point at an older Firebase app.
+  await Firebase.initializeApp(
+    options: !kIsWeb && defaultTargetPlatform == TargetPlatform.android
+        ? null
+        : DefaultFirebaseOptions.currentPlatform,
+  );
 
   runApp(const MyApp());
   unawaited(NotificationService.instance.start());
