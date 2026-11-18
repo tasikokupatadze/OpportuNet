@@ -442,6 +442,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
                   Center(
                     child: Wrap(
                       alignment: WrapAlignment.center,
+                      crossAxisAlignment: WrapCrossAlignment.center,
                       children: [
                         const Text("Already have an account? "),
                         TextButton(

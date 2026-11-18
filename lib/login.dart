@@ -581,6 +581,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   Center(
                     child: Wrap(
                       alignment: WrapAlignment.center,
+                      crossAxisAlignment: WrapCrossAlignment.center,
                       children: [
                         const Text("Don't have an account? "),
                         TextButton(
