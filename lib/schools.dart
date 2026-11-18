@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import 'app_ui.dart';
+
 class SchoolScreen extends StatefulWidget {
   const SchoolScreen({super.key});
 
@@ -53,11 +55,17 @@ class _SchoolScreenState extends State<SchoolScreen> {
   ];
 
   Future<void> launchWebsite(String link) async {
-    final Uri url = Uri.parse(link);
-
-    if (await canLaunchUrl(url)) {
-      await launchUrl(url, mode: LaunchMode.externalApplication);
+    try {
+      final opened = await launchUrl(Uri.parse(link),
+          mode: LaunchMode.externalApplication);
+      if (opened) return;
+    } catch (_) {
+      // A device can decline the URL or have no browser available.
     }
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+      content: Text('Couldn’t open this school’s website. Please try again.'),
+    ));
   }
 
   @override
@@ -65,88 +73,123 @@ class _SchoolScreenState extends State<SchoolScreen> {
     return Scaffold(
       appBar: AppBar(
         centerTitle: true,
-        title: Image.asset('assets/opportunet1.png', height: 55),
+        title: Image.asset('assets/opportunet1.png',
+            height: 55, semanticLabel: 'OpportuNet'),
       ),
-      body: Padding(
-        padding: EdgeInsets.all(14),
+      body: SafeArea(
+        top: false,
+        child: ContentWidth(
+          maxWidth: 800,
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.fromLTRB(16, 18, 16, 24),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(20),
+                  decoration: BoxDecoration(
+                    gradient: const LinearGradient(
+                      colors: [brandBlue, Color(0xffb6ebff)],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
+                    borderRadius: BorderRadius.circular(24),
+                  ),
+                  child: const Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Icon(Icons.school_outlined, color: brandInk, size: 32),
+                      SizedBox(height: 14),
+                      Text('Best Schools in Georgia',
+                          style: TextStyle(
+                              fontSize: 26,
+                              fontWeight: FontWeight.bold,
+                              color: brandInk)),
+                      SizedBox(height: 8),
+                      Text(
+                        'Explore schools in the country of Georgia and visit their official websites to learn more.',
+                        style: TextStyle(
+                            fontSize: 14, height: 1.5, color: brandInk),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 20),
+                LayoutBuilder(builder: (context, constraints) {
+                  final textScale =
+                      MediaQuery.textScalerOf(context).scale(16) / 16;
+                  final minCardWidth = 240 * textScale.clamp(1.0, 1.5);
+                  final columns =
+                      ((constraints.maxWidth + 14) / (minCardWidth + 14))
+                          .floor()
+                          .clamp(1, 2);
+                  final cardWidth =
+                      (constraints.maxWidth - 14 * (columns - 1)) / columns;
+                  return Wrap(
+                    spacing: 14,
+                    runSpacing: 14,
+                    children: schools
+                        .map((school) => SizedBox(
+                            width: cardWidth, child: _schoolCard(school)))
+                        .toList(),
+                  );
+                }),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _schoolCard(Map<String, String> school) {
+    final theme = Theme.of(context);
+    return Card(
+      margin: EdgeInsets.zero,
+      color: theme.cardColor,
+      elevation: 1,
+      shadowColor: Colors.black.withValues(alpha: 0.15),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(20),
+        side: BorderSide(color: theme.colorScheme.outlineVariant),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(18),
         child: Column(
           children: [
-            Expanded(
-              child: GridView.builder(
-                itemCount: schools.length,
-                gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                  crossAxisCount: 2,
-                  mainAxisSpacing: 14,
-                  crossAxisSpacing: 14,
-                  childAspectRatio: 0.82,
+            ClipRRect(
+              borderRadius: BorderRadius.circular(14),
+              child: Image.asset(school['image']!,
+                  width: 80,
+                  height: 80,
+                  fit: BoxFit.contain,
+                  excludeFromSemantics: true),
+            ),
+            const SizedBox(height: 16),
+            Text(school['title']!,
+                textAlign: TextAlign.center,
+                style: theme.textTheme.titleMedium?.copyWith(
+                    color: theme.colorScheme.onSurface,
+                    fontWeight: FontWeight.w700)),
+            const SizedBox(height: 14),
+            SizedBox(
+              width: double.infinity,
+              child: FilledButton.icon(
+                onPressed: () => launchWebsite(school['url']!),
+                style: FilledButton.styleFrom(
+                  minimumSize: const Size(48, 48),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                  backgroundColor: brandBlue,
+                  foregroundColor: brandInk,
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(14)),
                 ),
-                itemBuilder: (context, index) {
-                  final school = schools[index];
-
-                  return InkWell(
-                    borderRadius: BorderRadius.circular(18),
-                    onTap: () => launchWebsite(school["url"]!),
-                    child: Container(
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(18),
-                        color: Theme.of(context).colorScheme.surface,
-                        border: Border.all(
-                          color: Theme.of(context).colorScheme.surface,
-                          width: 1.2,
-                        ),
-                        boxShadow: [
-                          BoxShadow(
-                            blurRadius: 6,
-                            color: Colors.black26,
-                            offset: Offset(0, 4),
-                          ),
-                        ],
-                      ),
-                      child: Padding(
-                        padding: EdgeInsets.all(12),
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                          children: [
-                            ClipRRect(
-                              borderRadius: BorderRadius.circular(14),
-                              child: Image.asset(
-                                school["image"]!,
-                                height: 80,
-                                width: 80,
-                              ),
-                            ),
-                            Text(
-                              school["title"]!,
-                              textAlign: TextAlign.center,
-                              style: TextStyle(
-                                color: Theme.of(context).colorScheme.primary,
-                                fontWeight: FontWeight.bold,
-                                fontSize: 15,
-                              ),
-                            ),
-                            Container(
-                              padding: EdgeInsets.symmetric(
-                                horizontal: 14,
-                                vertical: 7,
-                              ),
-                              decoration: BoxDecoration(
-                                color: Theme.of(context).colorScheme.primary,
-                                borderRadius: BorderRadius.circular(30),
-                              ),
-                              child: Text(
-                                "Open",
-                                style: TextStyle(
-                                  color:
-                                      Theme.of(context).colorScheme.onPrimary,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  );
-                },
+                icon: const Icon(Icons.open_in_new, size: 18),
+                label: Text('Visit website',
+                    textAlign: TextAlign.center,
+                    semanticsLabel: 'Visit ${school['title']} website'),
               ),
             ),
           ],

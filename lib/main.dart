@@ -1,3 +1,5 @@
+import 'notification_service.dart';
+import 'notification_bell.dart';
 import 'app_ui.dart';
 
 import 'package:flutter/material.dart';
@@ -44,6 +46,7 @@ void main() async {
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
 
   runApp(const MyApp());
+  unawaited(NotificationService.instance.start());
 }
 
 List<Map<String, String>> users = [];
@@ -56,6 +59,7 @@ class MyApp extends StatelessWidget {
       valueListenable: themeNotifier,
       builder: (context, mode, _) {
         return MaterialApp(
+          navigatorKey: notificationNavigatorKey,
           debugShowCheckedModeBanner: false,
           title: 'OpportuNet',
           theme: appTheme(Brightness.light),
@@ -115,6 +119,9 @@ class _HomeScreenState extends State<HomeScreen> {
     final user = FirebaseAuth.instance.currentUser;
     uid = user!.uid;
     _connectMessages();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) NotificationService.instance.openPending();
+    });
 
     _authSub = FirebaseAuth.instance.authStateChanges().listen((user) {
       if (!mounted) return;
@@ -946,7 +953,18 @@ class _HomeScreenState extends State<HomeScreen> {
                                       title: "Log out",
                                       subtitle: "Leave account",
                                       onTap: () async {
-                                        await FirebaseAuth.instance.signOut();
+                                        try {
+                                          await NotificationService.instance
+                                              .signOut();
+                                        } catch (_) {
+                                          if (!context.mounted) return;
+                                          ScaffoldMessenger.of(context)
+                                              .showSnackBar(const SnackBar(
+                                            content: Text(
+                                                'Could not finish logging out. Check your connection and try again.'),
+                                          ));
+                                
+                                        }
                                       },
                                     ),
                                   ),
@@ -1132,6 +1150,7 @@ class _HomeScreenState extends State<HomeScreen> {
       child: Scaffold(
         appBar: AppBar(
           automaticallyImplyLeading: false,
+          actions: const [NotificationBell()],
           title: Image.asset('assets/opportunet1.png', height: 60),
           centerTitle: true,
         ),

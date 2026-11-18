@@ -59,7 +59,7 @@ class _SavedPostsScreenState extends State<SavedPostsScreen> {
                 {return const Center(child: CircularProgressIndicator());}
               final posts = snapshot.data!.docs;
               if (posts.isEmpty)
-                {return const Center(
+               { return const Center(
                   child: Padding(
                     padding: EdgeInsets.all(24),
                     child: Text(

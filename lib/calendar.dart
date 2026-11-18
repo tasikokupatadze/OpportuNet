@@ -7,7 +7,8 @@ import 'app_ui.dart';
 
 class CalendarScreen extends StatefulWidget {
   final bool isOrganizer;
-  const CalendarScreen({super.key, this.isOrganizer = false});
+  final DateTime? initialDay;
+  const CalendarScreen({super.key, this.isOrganizer = false, this.initialDay});
   @override
   State<CalendarScreen> createState() => _CalendarScreenState();
 }
@@ -20,6 +21,11 @@ class _CalendarScreenState extends State<CalendarScreen> {
   @override
   void initState() {
     super.initState();
+    final initial = widget.initialDay;
+    if (initial != null && initial.year >= 2020 && initial.year <= 2035) {
+      _selectedDay = initial;
+      _focusedDay = initial;
+    }
     _connect();
   }
 
@@ -86,8 +92,9 @@ class _CalendarScreenState extends State<CalendarScreen> {
                       onChanged: saving
                           ? null
                           : (value) {
-                              if (value != null)
-                                {setDialog(() => category = value);}
+                              if (value != null) {
+                                setDialog(() => category = value);
+                              }
                             },
                     ),
                     if (error != null)
@@ -191,10 +198,12 @@ class _CalendarScreenState extends State<CalendarScreen> {
               stream: _stream,
               builder: (context, snapshot) {
                 if (snapshot.hasError)
-                  {return LoadError(
-                    message: 'Could not load calendar events.',
-                    onRetry: () => setState(_connect),
-                  );}
+                  {
+                    return LoadError(
+                      message: 'Could not load calendar events.',
+                      onRetry: () => setState(_connect),
+                    );
+                  }
                 if (!snapshot.hasData)
                   {return const Center(child: CircularProgressIndicator());}
                 final events = <DateTime, List<CalendarEvent>>{};

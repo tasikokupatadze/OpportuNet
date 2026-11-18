@@ -235,16 +235,4 @@ class _CreatePostState extends State<CreatePost> {
                                     "Post",
                                     style: TextStyle(
                                       fontSize: 16,
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                  ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  )),
-        ),
-      ),
-    );
-  }
-}
+                                      fontWeight: FontWeight.bold

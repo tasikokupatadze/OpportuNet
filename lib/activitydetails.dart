@@ -1,3 +1,4 @@
+import 'app_ui.dart';
 
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -5,14 +6,8 @@ import 'package:url_launcher/url_launcher.dart';
 class ActivityDetailsScreen extends StatelessWidget {
   final Map<String, dynamic> activity;
 
+  const ActivityDetailsScreen({super.key, required this.activity});
 
-
-  const ActivityDetailsScreen({
-    super.key,
-    required this.activity,
-  });
-
-  // Keep your remaining methods here.
   Future<void> _launchWebsite(String website) async {
     final Uri url = Uri.parse(website);
 
@@ -41,8 +36,8 @@ class ActivityDetailsScreen extends StatelessWidget {
       ),
       body: SafeArea(
         top: false,
-        child:ConstrainedBox(
-  constraints: const BoxConstraints(maxWidth: 600),
+        child: ContentWidth(
+          maxWidth: 850,
           child: SingleChildScrollView(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,

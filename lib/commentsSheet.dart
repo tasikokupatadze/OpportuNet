@@ -96,7 +96,7 @@ class _CommentsSheetState extends State<CommentsSheet> {
       }, SetOptions(merge: true));
 
       if (mounted && _commentCtrl.text.trim() == commentText)
-        {_commentCtrl.clear();}
+        _commentCtrl.clear();
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context)

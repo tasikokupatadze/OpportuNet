@@ -1,0 +1,10 @@
+{
+  "name": "opportunet-notifications",
+  "private": true,
+  "version": "1.0.0",
+  "description": "New post and academic calendar notifications for OpportuNet",
+  "main": "index.js",
+  "engines": { "node": "22" },
+  "scripts": { "test": "node --test", "check": "node --check index.js && node --check notification-logic.js" },
+  "dependencies": { "firebase-admin": "14.5.1", "firebase-functions": "7.4.0" }
+}

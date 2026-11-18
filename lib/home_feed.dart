@@ -879,7 +879,7 @@ class _HomeFeedState extends State<HomeFeed> {
 class OpportunityCard extends StatelessWidget {
   final Map<String, dynamic> data;
   final bool big; // true in the centered layout
-  const OpportunityCard({super.key, required this.data, required this.big});
+  const OpportunityCard({required this.data, required this.big});
 
   @override
   Widget build(BuildContext context) {
@@ -1013,3 +1013,4 @@ class OpportunityCard extends StatelessWidget {
         ),
       );
 }
+                                                              

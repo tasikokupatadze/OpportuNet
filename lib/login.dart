@@ -1,3 +1,4 @@
+import 'notification_service.dart';
 import 'app_ui.dart';
 
 import 'package:flutter/material.dart';
@@ -355,7 +356,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
                                 if (requiresVerification &&
                                     !refreshedUser.emailVerified) {
-                                  await FirebaseAuth.instance.signOut();
+                                  await NotificationService.instance.signOut();
 
                                   if (!context.mounted) return;
 

@@ -1,0 +1,35 @@
+// Merge these matches INSIDE your existing:
+// service cloud.firestore { match /databases/{database}/documents { ... } }
+// Do not replace your full rules file with this fragment.
+// Rules grant access if ANY matching allow expression is true. A permissive
+// recursive rule can override these restrictions; review existing broad matches.
+
+match /notifications/{notificationId} {
+  allow read: if request.auth != null;
+  allow write: if false; // Cloud Functions Admin SDK bypasses rules.
+}
+
+match /users/{uid}/notificationDevices/{deviceId} {
+  allow read, delete: if request.auth != null && request.auth.uid == uid;
+  allow create, update: if request.auth != null && request.auth.uid == uid
+    && request.resource.data.keys().hasOnly(['token', 'platform', 'updatedAt'])
+    && request.resource.data.keys().hasAll(['token', 'platform', 'updatedAt'])
+    && request.resource.data.token is string
+    && request.resource.data.token.size() > 0
+    && request.resource.data.token.size() <= 4096
+    && request.resource.data.platform in ['web', 'android', 'ios']
+    && request.resource.data.updatedAt == request.time;
+}
+
+match /users/{uid}/notificationReads/{notificationId} {
+  allow read, delete: if request.auth != null && request.auth.uid == uid;
+  allow create, update: if request.auth != null && request.auth.uid == uid
+    && request.resource.data.keys().hasOnly(['readAt'])
+    && request.resource.data.keys().hasAll(['readAt'])
+    && request.resource.data.readAt == request.time
+    && exists(/databases/$(database)/documents/notifications/$(notificationId));
+}
+
+match /_notificationDelivery/{notificationId} {
+  allow read, write: if false;
+}

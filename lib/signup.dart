@@ -1,4 +1,5 @@
-
+import 'notification_service.dart';
+import 'app_ui.dart';
 
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
@@ -354,7 +355,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
                                 });
 
                                 await user.sendEmailVerification();
-                                await FirebaseAuth.instance.signOut();
+                                await NotificationService.instance.signOut();
 
                                 if (!context.mounted) return;
 
@@ -410,24 +411,21 @@ class _SignUpScreenState extends State<SignUpScreen> {
                                   ),
                                 );
                               } finally {
-                                if (mounted)
-                                  {setState(() => _isSigningUp = false);}
+                                if (mounted) {
+                                  setState(() => _isSigningUp = false);
+                                }
                               }
                             },
                       style: ElevatedButton.styleFrom(
                         backgroundColor: brand,
-                        foregroundColor: const Color(0xff2b88b4),
+                        foregroundColor: brandInk,
                         elevation: 0,
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(14),
                         ),
                       ),
                       child: _isSigningUp
-                          ? const SizedBox(
-  height: 20,
-  width: 20,
-  child: CircularProgressIndicator(strokeWidth: 2),
-)
+                          ? const BusyIndicator()
                           : const Text(
                               "Create Account",
                               style: TextStyle(
