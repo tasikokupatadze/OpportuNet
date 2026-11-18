@@ -2,7 +2,7 @@ import 'notification_service.dart';
 import 'notification_bell.dart';
 import 'app_ui.dart';
 
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'dart:convert';
@@ -952,18 +952,18 @@ class _HomeScreenState extends State<HomeScreen> {
                                       accent: Colors.red,
                                       title: "Log out",
                                       subtitle: "Leave account",
-                                      onTap: () async {
+                                     onTap: () async {
+                                        final messenger = ScaffoldMessenger.of(context);
                                         try {
-                                          await NotificationService.instance
-                                              .signOut();
+                                          await NotificationService.instance.signOut();
                                         } catch (_) {
-                                          if (!context.mounted) return;
-                                          ScaffoldMessenger.of(context)
-                                              .showSnackBar(const SnackBar(
-                                            content: Text(
-                                                'Could not finish logging out. Check your connection and try again.'),
-                                          ));
-                                
+                                          messenger.showSnackBar(
+                                            const SnackBar(
+                                              content: Text(
+                                                'Could not finish logging out. Check your connection and try again.',
+                                              ),
+                                            ),
+                                          );
                                         }
                                       },
                                     ),
