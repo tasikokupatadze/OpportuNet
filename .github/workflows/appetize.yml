@@ -25,12 +25,16 @@ jobs:
       - name: Install dependencies
         run: flutter pub get
 
-      - - name: Build Debug APK
-     run: flutter build apk --debug --android-skip-build-dependency-validation
+      - name: Build Debug APK
+        run: flutter build apk --debug --android-skip-build-dependency-validation
 
       - name: Upload APK to Appetize.io
+        id: appetize
         uses: appetizeio/github-action-appetize@v1.1.0
         with:
           apiToken: ${{ secrets.APPETIZE_API_TOKEN }}
           platform: 'android'
           appFile: build/app/outputs/flutter-apk/app-debug.apk
+
+      - name: Print Appetize Preview Link
+        run: echo "Live App URL -> https://appetize.io/app/${{ steps.appetize.outputs.publicKey }}"
