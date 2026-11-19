@@ -17,7 +17,7 @@ android/app/google-services.json
 
 
 # APIS
- lib/firebase_options.dart
+lib/firebase_options.dart
 
 # Generated
 .flutter-plugins
@@ -25,3 +25,7 @@ android/app/google-services.json
 .metadata
 # Generated per machine by Flutter
 **/Flutter/ephemeral/
+
+# Kotlin compiler logs / Node dependencies
+.kotlin/
+node_modules/
