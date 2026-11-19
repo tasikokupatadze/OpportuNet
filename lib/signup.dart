@@ -440,31 +440,40 @@ class _SignUpScreenState extends State<SignUpScreen> {
 
                   // LOGIN LINK
                   Center(
-                    child: Wrap(
-                      alignment: WrapAlignment.center,
-                      crossAxisAlignment: WrapCrossAlignment.center,
-                      children: [
-                        const Text("Already have an account? "),
-                        TextButton(
-                          onPressed: _isSigningUp
-                              ? null
-                              : () {
-                                  Navigator.pop(context);
-                                },
-                          style: TextButton.styleFrom(
-                            padding: const EdgeInsets.symmetric(horizontal: 12),
-                            minimumSize: const Size(48, 48),
-                            tapTargetSize: MaterialTapTargetSize.padded,
-                          ),
-                          child: const Text(
-                            "Log in",
-                            style: TextStyle(
-                              color: darkBrand,
-                              fontWeight: FontWeight.bold,
+                    child: TextButton(
+                      onPressed: _isSigningUp
+                          ? null
+                          : () {
+                              Navigator.pop(context);
+                            },
+                      style: TextButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(horizontal: 12),
+                        minimumSize: const Size(48, 48),
+                        tapTargetSize: MaterialTapTargetSize.padded,
+                      ),
+                      child: Text.rich(
+                        TextSpan(
+                          children: [
+                            TextSpan(
+                              text: "Already have an account? ",
+                              style: TextStyle(
+                                color: Theme.of(
+                                  context,
+                                ).textTheme.bodyMedium?.color,
+                                fontWeight: FontWeight.normal,
+                              ),
                             ),
-                          ),
+                            const TextSpan(
+                              text: "Log in",
+                              style: TextStyle(
+                                color: darkBrand,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ],
                         ),
-                      ],
+                        textAlign: TextAlign.center,
+                      ),
                     ),
                   ),
                 ],

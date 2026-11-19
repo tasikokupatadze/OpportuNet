@@ -579,36 +579,45 @@ class _LoginScreenState extends State<LoginScreen> {
 
                   // SIGN-UP
                   Center(
-                    child: Wrap(
-                      alignment: WrapAlignment.center,
-                      crossAxisAlignment: WrapCrossAlignment.center,
-                      children: [
-                        const Text("Don't have an account? "),
-                        TextButton(
-                          onPressed: _isBusy
-                              ? null
-                              : () {
-                                  Navigator.push(
-                                    context,
-                                    MaterialPageRoute(
-                                      builder: (_) => const SignUpScreen(),
-                                    ),
-                                  );
-                                },
-                          style: TextButton.styleFrom(
-                            padding: const EdgeInsets.symmetric(horizontal: 12),
-                            minimumSize: const Size(48, 48),
-                            tapTargetSize: MaterialTapTargetSize.padded,
-                          ),
-                          child: const Text(
-                            "Sign up",
-                            style: TextStyle(
-                              color: darkBrand,
-                              fontWeight: FontWeight.bold,
+                    child: TextButton(
+                      onPressed: _isBusy
+                          ? null
+                          : () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (_) => const SignUpScreen(),
+                                ),
+                              );
+                            },
+                      style: TextButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(horizontal: 12),
+                        minimumSize: const Size(48, 48),
+                        tapTargetSize: MaterialTapTargetSize.padded,
+                      ),
+                      child: Text.rich(
+                        TextSpan(
+                          children: [
+                            TextSpan(
+                              text: "Don't have an account? ",
+                              style: TextStyle(
+                                color: Theme.of(
+                                  context,
+                                ).textTheme.bodyMedium?.color,
+                                fontWeight: FontWeight.normal,
+                              ),
                             ),
-                          ),
+                            const TextSpan(
+                              text: "Sign up",
+                              style: TextStyle(
+                                color: darkBrand,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ],
                         ),
-                      ],
+                        textAlign: TextAlign.center,
+                      ),
                     ),
                   ),
                 ],
