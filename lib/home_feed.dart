@@ -9,11 +9,34 @@ import 'extracurriculars.dart';
 import 'roadmaps.dart';
 import 'schools.dart';
 
-const Map<String, (String, IconData)> kCategories = {
-  "olympiads": ("Olympiads", Icons.emoji_events_rounded),
-  "volunteering": ("Volunteering", Icons.volunteer_activism_rounded),
-  "exchange": ("Exchange", Icons.flight_takeoff_rounded),
+const Map<String, IconData> kCategories = {
+  "olympiads": Icons.emoji_events_rounded,
+  "volunteering": Icons.volunteer_activism_rounded,
+  "exchange": Icons.flight_takeoff_rounded,
 };
+
+String categoryLabel(BuildContext context, String key) => switch (key) {
+      "olympiads" => context.l10n.catOlympiads,
+      "volunteering" => context.l10n.catVolunteering,
+      "exchange" => context.l10n.catExchange,
+      _ => key,
+    };
+
+String subjectLabel(BuildContext context, String key) => switch (key) {
+      "maths" => context.l10n.subjectMaths,
+      "physics" => context.l10n.subjectPhysics,
+      "chemistry" => context.l10n.subjectChemistry,
+      "biology" => context.l10n.subjectBiology,
+      "robotics" => context.l10n.subjectRobotics,
+      "informatics" => context.l10n.subjectInformatics,
+      "programming" => context.l10n.subjectProgramming,
+      "astrophysics" => context.l10n.subjectAstrophysics,
+      "linguistics" => context.l10n.subjectLinguistics,
+      "english" => context.l10n.subjectEnglish,
+      "economics" => context.l10n.subjectEconomics,
+      "other" => context.l10n.subjectOther,
+      _ => _capitalize(key),
+    };
 
 const String kCategoryField = "_section";
 
@@ -41,12 +64,12 @@ enum CostFilter { any, free, paid }
 enum SortBy { newest, deadline, title, cheapest }
 enum FeedLayout { grid, centered }
 
-const Map<SortBy, String> kSortLabels = {
-  SortBy.newest: "Newest",
-  SortBy.deadline: "Deadline",
-  SortBy.title: "A–Z",
-  SortBy.cheapest: "Free first",
-};
+String sortLabel(BuildContext context, SortBy sort) => switch (sort) {
+      SortBy.newest => context.l10n.sortNewest,
+      SortBy.deadline => context.l10n.sortDeadline,
+      SortBy.title => context.l10n.sortTitle,
+      SortBy.cheapest => context.l10n.sortFreeFirst,
+    };
 
 Stream<List<Map<String, dynamic>>> _allOpportunities() {
   final latest = <String, List<Map<String, dynamic>>>{};
@@ -338,7 +361,7 @@ class _HomeFeedState extends State<HomeFeed> {
                   hasScrollBody: false,
                   child: LoadError(
                     message:
-                        "Couldn't load opportunities. Check your connection and try again.",
+                        context.l10n.loadOpportunitiesFailed,
                     onRetry: () =>
                         setState(() => _stream = _allOpportunities()),
                   ),
@@ -375,12 +398,12 @@ class _HomeFeedState extends State<HomeFeed> {
               onChanged: (value) => setState(() => _query = value.trim()),
               textInputAction: TextInputAction.search,
               decoration: InputDecoration(
-                hintText: "Search opportunities",
+                hintText: context.l10n.searchOpportunities,
                 prefixIcon: const Icon(Icons.search_rounded),
                 suffixIcon: _query.isEmpty
                     ? null
                     : IconButton(
-                        tooltip: "Clear search",
+                        tooltip: context.l10n.clearSearch,
                         icon: const Icon(Icons.close_rounded),
                         onPressed: () => setState(() {
                           _searchCtrl.clear();
@@ -402,7 +425,7 @@ class _HomeFeedState extends State<HomeFeed> {
             isLabelVisible: _hasFilters,
             backgroundColor: _brandDark,
             child: IconButton.filled(
-              tooltip: "Filters and layout",
+              tooltip: context.l10n.filtersAndLayout,
               onPressed: _openFilterSheet,
               icon: const Icon(Icons.tune_rounded),
               style: IconButton.styleFrom(
@@ -460,10 +483,10 @@ class _HomeFeedState extends State<HomeFeed> {
       padding: const EdgeInsets.fromLTRB(16, 4, 16, 2),
       child: Row(
         children: [
-          tile(const ValueKey('home-roadmaps-shortcut'), "Roadmaps",
+          tile(const ValueKey('home-roadmaps-shortcut'), context.l10n.roadmaps,
               Icons.route_rounded, (_) => const RoadmapScreen()),
           const SizedBox(width: 8),
-          tile(const ValueKey('home-schools-shortcut'), "Schools in Georgia",
+          tile(const ValueKey('home-schools-shortcut'), context.l10n.schoolsInGeorgia,
               Icons.school_rounded, (_) => const SchoolScreen()),
         ],
       ),
@@ -505,12 +528,12 @@ class _HomeFeedState extends State<HomeFeed> {
         scrollDirection: Axis.horizontal,
         padding: const EdgeInsets.symmetric(horizontal: 16),
         children: [
-          chip("All", Icons.apps_rounded, _categories.isEmpty,
+          chip(context.l10n.all, Icons.apps_rounded, _categories.isEmpty,
               () => setState(_categories.clear)),
           for (final entry in kCategories.entries)
             chip(
-              entry.value.$1,
-              entry.value.$2,
+              categoryLabel(context, entry.key),
+              entry.value,
               _categories.contains(entry.key),
               () => setState(() {
                 if (!_categories.remove(entry.key)) {
@@ -526,8 +549,8 @@ class _HomeFeedState extends State<HomeFeed> {
   Widget _feedHeader(int? count) {
     final colors = Theme.of(context).colorScheme;
     final countText = count == null
-        ? "Opportunities"
-        : "$count ${count == 1 ? 'opportunity' : 'opportunities'}";
+        ? context.l10n.opportunities
+        : context.l10n.opportunityCount(count);
 
     return Row(
       children: [
@@ -539,7 +562,7 @@ class _HomeFeedState extends State<HomeFeed> {
         ),
         if (widget.isOrganizer)
           IconButton(
-            tooltip: "Add extracurricular",
+            tooltip: context.l10n.addOpportunity,
             icon: const Icon(Icons.add_rounded),
             onPressed: () => Navigator.push(
               context,
@@ -547,19 +570,19 @@ class _HomeFeedState extends State<HomeFeed> {
             ),
           ),
         PopupMenuButton<SortBy>(
-          tooltip: "Sort opportunities",
+          tooltip: context.l10n.sortOpportunities,
           initialValue: _sort,
           onSelected: (value) => setState(() => _sort = value),
           itemBuilder: (_) => [
             for (final value in SortBy.values)
-              PopupMenuItem(value: value, child: Text(kSortLabels[value]!)),
+              PopupMenuItem(value: value, child: Text(sortLabel(context, value))),
           ],
           child: Padding(
             padding: const EdgeInsets.symmetric(vertical: 12),
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Text(kSortLabels[_sort]!, style: const TextStyle(fontSize: 13)),
+                Text(sortLabel(context, _sort), style: const TextStyle(fontSize: 13)),
                 const Icon(Icons.expand_more, size: 17),
               ],
             ),
@@ -640,12 +663,14 @@ class _HomeFeedState extends State<HomeFeed> {
             const Icon(Icons.search_off_rounded, size: 40, color: _brandDark),
             const SizedBox(height: 10),
             Text(
-              filtered ? "Nothing matches your filters" : "No opportunities yet",
+              filtered
+                  ? context.l10n.nothingMatches
+                  : context.l10n.noOpportunitiesYet,
               textAlign: TextAlign.center,
               style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
             ),
             if (filtered)
-              TextButton(onPressed: _clearAll, child: const Text("Clear all")),
+              TextButton(onPressed: _clearAll, child: Text(context.l10n.clearAll)),
           ],
         ),
       ),
@@ -672,40 +697,40 @@ class _HomeFeedState extends State<HomeFeed> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text(
-                    "Filters",
+                  Text(
+                    context.l10n.filters,
                     style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800),
                   ),
                   const SizedBox(height: 18),
-                  const Text("Layout", style: heading),
+                  Text(context.l10n.layout, style: heading),
                   Wrap(
                     spacing: 8,
                     children: [
                       for (final layout in FeedLayout.values)
                         ChoiceChip(
                           label: Text(layout == FeedLayout.grid
-                              ? "Auto grid"
-                              : "Single column"),
+                              ? context.l10n.autoGrid
+                              : context.l10n.singleColumn),
                           selected: _layout == layout,
                           onSelected: (_) => update(() => _layout = layout),
                         ),
                     ],
                   ),
                   const SizedBox(height: 16),
-                  const Text("Sort by", style: heading),
+                  Text(context.l10n.sortBy, style: heading),
                   Wrap(
                     spacing: 8,
                     children: [
                       for (final sort in SortBy.values)
                         ChoiceChip(
-                          label: Text(kSortLabels[sort]!),
+                          label: Text(sortLabel(context, sort)),
                           selected: _sort == sort,
                           onSelected: (_) => update(() => _sort = sort),
                         ),
                     ],
                   ),
                   const SizedBox(height: 16),
-                  const Text("Olympiad subject", style: heading),
+                  Text(context.l10n.olympiadSubject, style: heading),
                   Wrap(
                     spacing: 8,
                     children: [
@@ -716,7 +741,7 @@ class _HomeFeedState extends State<HomeFeed> {
 ])
                         FilterChip(
                           avatar: Icon(kSubjectIcons[subject], size: 16),
-                          label: Text(_capitalize(subject)),
+                          label: Text(subjectLabel(context, subject)),
                           selected: _subjects.contains(subject),
                           onSelected: (selected) => update(() {
                             if (selected) {
@@ -729,13 +754,13 @@ class _HomeFeedState extends State<HomeFeed> {
                     ],
                   ),
                   const SizedBox(height: 16),
-                  const Text("Cost", style: heading),
+                  Text(context.l10n.cost, style: heading),
                   const SizedBox(height: 8),
                   SegmentedButton<CostFilter>(
-                    segments: const [
-                      ButtonSegment(value: CostFilter.any, label: Text("Any")),
-                      ButtonSegment(value: CostFilter.free, label: Text("Free")),
-                      ButtonSegment(value: CostFilter.paid, label: Text("Paid")),
+                    segments: [
+                      ButtonSegment(value: CostFilter.any, label: Text(context.l10n.costAny)),
+                      ButtonSegment(value: CostFilter.free, label: Text(context.l10n.free)),
+                      ButtonSegment(value: CostFilter.paid, label: Text(context.l10n.paid)),
                     ],
                     selected: {_cost},
                     onSelectionChanged: (values) =>
@@ -744,13 +769,15 @@ class _HomeFeedState extends State<HomeFeed> {
                   const SizedBox(height: 16),
                   Row(
                     children: [
-                      const Text("My age", style: heading),
+                      Text(context.l10n.myAge, style: heading),
                       const Spacer(),
-                      Text(_myAge == null ? "Any age" : "$_myAge years"),
+                      Text(_myAge == null
+                          ? context.l10n.anyAge
+                          : context.l10n.yearsOld(_myAge!)),
                     ],
                   ),
                   ChoiceChip(
-                    label: const Text("Any age"),
+                    label: Text(context.l10n.anyAge),
                     selected: _myAge == null,
                     onSelected: (_) => update(() => _myAge = null),
                   ),
@@ -759,7 +786,7 @@ class _HomeFeedState extends State<HomeFeed> {
                     min: 12,
                     max: 20,
                     divisions: 8,
-                    label: _myAge?.toString() ?? "Any age",
+                    label: _myAge?.toString() ?? context.l10n.anyAge,
                     onChanged: (value) => update(() => _myAge = value.round()),
                   ),
                   const SizedBox(height: 8),
@@ -770,12 +797,12 @@ class _HomeFeedState extends State<HomeFeed> {
                           _clearAll();
                           setSheet(() {});
                         },
-                        child: const Text("Reset"),
+                        child: Text(context.l10n.reset),
                       ),
                       const Spacer(),
                       FilledButton(
                         onPressed: () => Navigator.pop(sheetContext),
-                        child: const Text("Show results"),
+                        child: Text(context.l10n.showResults),
                       ),
                     ],
                   ),
@@ -815,18 +842,23 @@ class OpportunityCard extends StatelessWidget {
 
     final tags = <(IconData, String)>[
       if (section == "olympiads" && subject.isNotEmpty)
-        (kSubjectIcons[subject] ?? Icons.school_outlined, _capitalize(subject)),
+        (
+          kSubjectIcons[subject] ?? Icons.school_outlined,
+          subjectLabel(context, subject),
+        ),
       if (section == "exchange" && duration.isNotEmpty)
         (Icons.schedule_rounded, duration),
       if (age.isNotEmpty) (Icons.person_outline_rounded, age),
       (
         Icons.payments_outlined,
-        cost.isEmpty ? "Cost not specified" : (_isFree(cost) ? "Free" : cost),
+        cost.isEmpty
+            ? context.l10n.costNotSpecified
+            : (_isFree(cost) ? context.l10n.free : cost),
       ),
     ];
 
     Widget logoFallback() => Icon(
-      category?.$2 ?? Icons.school_outlined,
+      category ?? Icons.school_outlined,
       size: 25,
       color: _brandDark,
     );
@@ -875,7 +907,7 @@ class OpportunityCard extends StatelessWidget {
                       children: [
                         if (category != null)
                           Text(
-                            category.$1,
+                            categoryLabel(context, section),
                             style: TextStyle(
                               fontSize: 11,
                               color: colors.onSurfaceVariant,
@@ -883,7 +915,7 @@ class OpportunityCard extends StatelessWidget {
                             ),
                           ),
                         Text(
-                          title.isEmpty ? "Untitled opportunity" : title,
+                          title.isEmpty ? context.l10n.untitledOpportunity : title,
                           style: TextStyle(
                             fontSize: 16,
                             fontWeight: FontWeight.w700,
@@ -970,13 +1002,15 @@ class _DeadlineLabel extends StatelessWidget {
     final date = MaterialLocalizations.of(context).formatMediumDate(deadline);
 
     final (String text, Color bg, Color fg) = switch (days) {
-      < 0 => ("Closed · $date", colors.surfaceContainerHighest,
+      < 0 => (context.l10n.deadlineClosed(date), colors.surfaceContainerHighest,
           colors.onSurfaceVariant),
-      0 => ("Closes today", colors.errorContainer, colors.onErrorContainer),
-      1 => ("Closes tomorrow", colors.errorContainer, colors.onErrorContainer),
-      <= 14 => ("Closes in $days days · $date", colors.errorContainer,
+      0 => (context.l10n.closesToday, colors.errorContainer,
           colors.onErrorContainer),
-      _ => ("Deadline · $date", Colors.transparent, colors.onSurface),
+      1 => (context.l10n.closesTomorrow, colors.errorContainer,
+          colors.onErrorContainer),
+      <= 14 => (context.l10n.closesInDays(days, date), colors.errorContainer,
+          colors.onErrorContainer),
+      _ => (context.l10n.deadlineOn(date), Colors.transparent, colors.onSurface),
     };
 
     return Container(

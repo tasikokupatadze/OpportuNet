@@ -51,7 +51,7 @@ class _SavedPostsScreenState extends State<SavedPostsScreen> {
             builder: (context, snapshot) {
               if (snapshot.hasError) {
                 return LoadError(
-                  message: 'Could not load saved posts.',
+                  message: context.l10n.loadSavedFailed,
                   onRetry: () => setState(_connect),
                 );
               }
@@ -59,11 +59,11 @@ class _SavedPostsScreenState extends State<SavedPostsScreen> {
                 {return const Center(child: CircularProgressIndicator());}
               final posts = snapshot.data!.docs;
               if (posts.isEmpty)
-               { return const Center(
+               { return Center(
                   child: Padding(
                     padding: EdgeInsets.all(24),
                     child: Text(
-                      'No saved posts yet. Tap the bookmark on a post to save it.',
+                      context.l10n.noSavedPostsYet,
                       textAlign: TextAlign.center,
                     ),
                   ),

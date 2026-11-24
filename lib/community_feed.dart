@@ -125,7 +125,7 @@ class _CommunityFeedState extends State<CommunityFeed> {
                       hasScrollBody: false,
                       child: LoadError(
                         message:
-                            'Could not load posts. Check your connection and try again.',
+                            context.l10n.loadPostsFailed,
                         onRetry: () =>
                             setState(() => _postsStream = _connectPosts()),
                       ),
@@ -143,17 +143,19 @@ class _CommunityFeedState extends State<CommunityFeed> {
                       child: _empty(
                         categoryOf(_category).icon,
                         _query.trim().isNotEmpty
-                            ? 'No matching posts'
+                            ? context.l10n.noMatchingPosts
                             : _sort == FeedSort.saved
-                                ? 'No saved posts here'
+                                ? context.l10n.noSavedPostsHere
                                 : _category == 'All'
-                                    ? 'No posts yet'
-                                    : 'No $_category posts yet',
+                                    ? context.l10n.noPostsYet
+                                    : context.l10n.noCategoryPosts(
+                                        postCategoryLabel(context, _category),
+                                      ),
                         _query.trim().isNotEmpty
-                            ? 'Try a different search or category.'
+                            ? context.l10n.tryDifferentSearch
                             : _sort == FeedSort.saved
-                                ? 'Save posts with the bookmark button, or choose All.'
-                                : 'Be the first to start a conversation.',
+                                ? context.l10n.saveWithBookmark
+                                : context.l10n.beFirst,
                       ),
                     )
                   else
@@ -205,7 +207,7 @@ class _CommunityFeedState extends State<CommunityFeed> {
           size: 20,
         ),
         label: Text(
-          "New post",
+          context.l10n.newPost,
           style: TextStyle(
             color: Theme.of(context).colorScheme.surface,
             fontWeight: FontWeight.w600,
@@ -224,7 +226,7 @@ class _CommunityFeedState extends State<CommunityFeed> {
               controller: _searchCtrl,
               onChanged: (v) => setState(() => _query = v),
               decoration: InputDecoration(
-                hintText: "Search posts or people",
+                hintText: context.l10n.searchPostsOrPeople,
                 prefixIcon: Icon(Icons.search_rounded),
                 suffixIcon: _query.isEmpty
                     ? null
@@ -303,7 +305,7 @@ class _CommunityFeedState extends State<CommunityFeed> {
                           ),
                           SizedBox(width: 6),
                           Text(
-                            c.name,
+                            postCategoryLabel(context, c.name),
                             style: TextStyle(
                               fontWeight: FontWeight.w600,
                               fontSize: 13.5,
@@ -346,9 +348,9 @@ class _CommunityFeedState extends State<CommunityFeed> {
               padding: EdgeInsets.fromLTRB(14, 8, 14, 8),
               child: Row(
                 children: [
-                  _sortTab("Newest", FeedSort.newest),
-                  _sortTab("Popular", FeedSort.popular),
-                  _sortTab("Saved", FeedSort.saved),
+                  _sortTab(context.l10n.sortNewest, FeedSort.newest),
+                  _sortTab(context.l10n.sortPopular, FeedSort.popular),
+                  _sortTab(context.l10n.saved, FeedSort.saved),
                 ],
               ),
             ),
@@ -465,7 +467,7 @@ class PostCard extends StatelessWidget {
   void _openProfile(BuildContext context, String uid) {
     if (uid.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("This post doesn't have a valid user profile.")),
+        SnackBar(content: Text(context.l10n.invalidUserProfile)),
       );
       return;
     }
@@ -567,7 +569,7 @@ class PostCard extends StatelessWidget {
                             SizedBox(width: 4),
                             Flexible(
                               child: Text(
-                                cat.name,
+                                postCategoryLabel(context, cat.name),
                                 overflow: TextOverflow.ellipsis,
                                 style: TextStyle(
                                   fontSize: 12,
@@ -588,7 +590,7 @@ class PostCard extends StatelessWidget {
                               ),
                               Flexible(
                                 child: Text(
-                                  _ago(ts.toDate()),
+                                  _ago(context, ts.toDate()),
                                   overflow: TextOverflow.ellipsis,
                                   style: TextStyle(
                                     fontSize: 12,
@@ -626,21 +628,21 @@ class PostCard extends StatelessWidget {
                       final confirm = await showDialog<bool>(
                         context: context,
                         builder: (dialogContext) => AlertDialog(
-                          title: Text("Delete post?"),
+                          title: Text(context.l10n.deletePostTitle),
                           content: Text(
-                            "Are you sure you want to permanently delete this post?",
+                            context.l10n.deletePostBody,
                           ),
                           actions: [
                             TextButton(
                               onPressed: () =>
                                   Navigator.pop(dialogContext, false),
-                              child: Text("Cancel"),
+                              child: Text(context.l10n.cancel),
                             ),
                             TextButton(
                               onPressed: () =>
                                   Navigator.pop(dialogContext, true),
                               child: Text(
-                                "Delete",
+                                context.l10n.delete,
                                 style: TextStyle(color: Colors.red),
                               ),
                             ),
@@ -656,11 +658,11 @@ class PostCard extends StatelessWidget {
                         if (!context.mounted) return;
                         ScaffoldMessenger.of(
                           context,
-                        ).showSnackBar(SnackBar(content: Text("Post deleted")));
+                        ).showSnackBar(SnackBar(content: Text(context.l10n.postDeleted)));
                       } catch (e) {
                         if (!context.mounted) return;
                         ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(content: Text("Could not delete post: $e")),
+                          SnackBar(content: Text(context.l10n.postDeleteFailed)),
                         );
                       }
                     }
@@ -668,10 +670,10 @@ class PostCard extends StatelessWidget {
                   itemBuilder: (_) => [
                     PopupMenuItem(
                       value: "profile",
-                      child: Text("View profile"),
+                      child: Text(context.l10n.viewProfile),
                     ),
                     if (user?.uid == userId || isOrganizer)
-                      PopupMenuItem(value: "delete", child: Text("Delete")),
+                      PopupMenuItem(value: "delete", child: Text(context.l10n.delete)),
                   ],
                 ),
               ],
@@ -786,7 +788,9 @@ class PostCard extends StatelessWidget {
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(
                         content: Text(
-                          isSaved ? "Removed from saved posts" : "Saved",
+                          isSaved
+                              ? context.l10n.removedFromSaved
+                              : context.l10n.savedConfirm,
                         ),
                       ),
                     );
@@ -831,12 +835,12 @@ class PostCard extends StatelessWidget {
         ),
       );
 
-  static String _ago(DateTime d) {
+  static String _ago(BuildContext context, DateTime d) {
     final diff = DateTime.now().difference(d);
-    if (diff.inMinutes < 1) return "now";
-    if (diff.inMinutes < 60) return "${diff.inMinutes}m";
-    if (diff.inHours < 24) return "${diff.inHours}h";
-    if (diff.inDays < 7) return "${diff.inDays}d";
+    if (diff.inMinutes < 1) return context.l10n.agoNow;
+    if (diff.inMinutes < 60) return context.l10n.agoMinutes(diff.inMinutes);
+    if (diff.inHours < 24) return context.l10n.agoHours(diff.inHours);
+    if (diff.inDays < 7) return context.l10n.agoDays(diff.inDays);
     return "${d.day}/${d.month}/${d.year}";
   }
 }
@@ -894,7 +898,7 @@ class _PostBodyState extends State<_PostBody> {
             ),
             TextButton(
               onPressed: () => setState(() => _expanded = !_expanded),
-              child: Text(_expanded ? 'See less' : 'See more'),
+              child: Text(_expanded ? context.l10n.seeLess : context.l10n.seeMore),
             ),
           ],
         );

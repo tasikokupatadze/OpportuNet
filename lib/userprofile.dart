@@ -22,7 +22,7 @@ class UserProfile extends StatelessWidget {
             FirebaseFirestore.instance.collection("users").doc(uid).snapshots(),
         builder: (context, snapshot) {
           if (snapshot.hasError) {
-            return Center(child: Text("Error: ${snapshot.error}"));
+            return Center(child: Text(context.l10n.profileLoadFailed));
           }
 
           if (snapshot.connectionState == ConnectionState.waiting) {
@@ -30,7 +30,7 @@ class UserProfile extends StatelessWidget {
           }
 
           if (!snapshot.hasData || !snapshot.data!.exists) {
-            return Center(child: Text("User not found"));
+            return Center(child: Text(context.l10n.userNotFound));
           }
 
           final data = snapshot.data!.data() as Map<String, dynamic>? ?? {};
@@ -110,7 +110,7 @@ class UserProfile extends StatelessWidget {
                       ),
                       SizedBox(height: 14),
                       Text(
-                        fullName.isEmpty ? "User Profile" : fullName,
+                        fullName.isEmpty ? context.l10n.userProfile : fullName,
                         textAlign: TextAlign.center,
                         style: TextStyle(
                           fontSize: 24,
@@ -129,7 +129,7 @@ class UserProfile extends StatelessWidget {
                           borderRadius: BorderRadius.circular(20),
                         ),
                         child: Text(
-                          "Community Member",
+                          context.l10n.communityMember,
                           style: TextStyle(
                             fontSize: 12,
                             fontWeight: FontWeight.w600,
@@ -147,8 +147,8 @@ class UserProfile extends StatelessWidget {
                       child: _infoCard(
                         context,
                         icon: Icons.cake_outlined,
-                        title: "Age",
-                        value: age.isEmpty ? "Not added" : age,
+                        title: context.l10n.age,
+                        value: age.isEmpty ? context.l10n.notAdded : age,
                       ),
                     ),
                     SizedBox(width: 12),
@@ -156,8 +156,8 @@ class UserProfile extends StatelessWidget {
                       child: _infoCard(
                         context,
                         icon: Icons.person_outline,
-                        title: "Name",
-                        value: name.isEmpty ? "Not added" : name,
+                        title: context.l10n.name,
+                        value: name.isEmpty ? context.l10n.notAdded : name,
                       ),
                     ),
                   ],
@@ -165,11 +165,11 @@ class UserProfile extends StatelessWidget {
                 SizedBox(height: 12),
                 _sectionCard(
                   context,
-                  title: "About me",
+                  title: context.l10n.aboutMe,
                   icon: Icons.edit_note,
                   child: Text(
                     aboutMe.trim().isEmpty
-                        ? "This user has not added an about section yet."
+                        ? context.l10n.noAboutSection
                         : aboutMe.trim(),
                     style: TextStyle(
                       fontSize: 14,
@@ -181,15 +181,15 @@ class UserProfile extends StatelessWidget {
                 SizedBox(height: 12),
                 _sectionCard(
                   context,
-                  title: "Profile details",
+                  title: context.l10n.profileDetails,
                   icon: Icons.badge_outlined,
                   child: Column(
                     children: [
-                      _detailRow(context, "Name", name),
+                      _detailRow(context, context.l10n.name, name),
                       SizedBox(height: 10),
-                      _detailRow(context, "Surname", surname),
+                      _detailRow(context, context.l10n.surname, surname),
                       SizedBox(height: 10),
-                      _detailRow(context, "Age", age),
+                      _detailRow(context, context.l10n.age, age),
                     ],
                   ),
                 ),
@@ -302,7 +302,7 @@ class UserProfile extends StatelessWidget {
         ),
         Expanded(
           child: Text(
-            value.trim().isEmpty ? "Not added" : value,
+            value.trim().isEmpty ? context.l10n.notAdded : value,
             style: TextStyle(
               fontSize: 14,
               fontWeight: FontWeight.w600,

@@ -1,5 +1,26 @@
 import 'package:material_ui/material_ui.dart';
 
+import 'l10n/app_localizations.dart';
+
+export 'l10n/app_localizations.dart';
+
+extension L10nContext on BuildContext {
+  AppLocalizations get l10n => AppLocalizations.of(this)!;
+}
+
+/// Community post categories are stored in English; this only changes the label.
+String postCategoryLabel(BuildContext context, String name) =>
+    switch (name.toLowerCase()) {
+      "all" => context.l10n.all,
+      "math" => context.l10n.catMath,
+      "coding" => context.l10n.catCoding,
+      "arts" => context.l10n.catArts,
+      "languages" => context.l10n.catLanguages,
+      "career" => context.l10n.catCareer,
+      "general" => context.l10n.catGeneral,
+      _ => name,
+    };
+
 const brandBlue = Color(0xff84d6fe);
 const brandInk = Color(0xff17394e);
 // Icon/accent blue. Use brandInk or colorScheme roles for text: brandBlue is too
@@ -78,7 +99,7 @@ class LoadError extends StatelessWidget {
               OutlinedButton.icon(
                 onPressed: onRetry,
                 icon: const Icon(Icons.refresh),
-                label: const Text('Try again'),
+                label: Text(context.l10n.tryAgain),
               ),
             ],
           ),

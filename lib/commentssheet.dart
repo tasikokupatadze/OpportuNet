@@ -68,7 +68,7 @@ class _CommentsSheetState extends State<CommentsSheet> {
                   _expandedComments.add(id);
                 }
               }),
-              child: Text(expanded ? 'See less' : 'See more'),
+              child: Text(expanded ? context.l10n.seeLess : context.l10n.seeMore),
             ),
           ],
         );
@@ -154,7 +154,7 @@ class _CommentsSheetState extends State<CommentsSheet> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context)
-            .showSnackBar(SnackBar(content: Text("Failed to add comment: $e")));
+            .showSnackBar(SnackBar(content: Text(context.l10n.commentAddFailed)));
       }
     } finally {
       if (mounted) setState(() => _isSending = false);
@@ -168,20 +168,20 @@ class _CommentsSheetState extends State<CommentsSheet> {
       context: context,
       builder: (dialogContext) {
         return AlertDialog(
-          title: const Text("Edit comment"),
+          title: Text(context.l10n.editComment),
           content: TextField(
             controller: controller,
             autofocus: true,
             maxLines: 4,
-            decoration: const InputDecoration(
-              hintText: "Write your comment...",
+            decoration: InputDecoration(
+              hintText: context.l10n.writeComment,
               border: OutlineInputBorder(),
             ),
           ),
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(dialogContext),
-              child: const Text("Cancel"),
+              child: Text(context.l10n.cancel),
             ),
             ElevatedButton(
               onPressed: () {
@@ -190,7 +190,7 @@ class _CommentsSheetState extends State<CommentsSheet> {
                   Navigator.pop(dialogContext, text);
                 }
               },
-              child: const Text("Save"),
+              child: Text(context.l10n.save),
             ),
           ],
         );
@@ -211,7 +211,7 @@ class _CommentsSheetState extends State<CommentsSheet> {
       if (mounted) {
         ScaffoldMessenger.of(
           context,
-        ).showSnackBar(SnackBar(content: Text("Failed to edit comment: $e")));
+        ).showSnackBar(SnackBar(content: Text(context.l10n.commentEditFailed)));
       }
     }
   }
@@ -221,16 +221,16 @@ class _CommentsSheetState extends State<CommentsSheet> {
       context: context,
       builder: (dialogContext) {
         return AlertDialog(
-          title: const Text("Delete comment?"),
-          content: const Text("Are you sure you want to delete this comment?"),
+          title: Text(context.l10n.deleteCommentTitle),
+          content: Text(context.l10n.deleteCommentBody),
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(dialogContext, false),
-              child: const Text("Cancel"),
+              child: Text(context.l10n.cancel),
             ),
             TextButton(
               onPressed: () => Navigator.pop(dialogContext, true),
-              child: const Text("Delete", style: TextStyle(color: Colors.red)),
+              child: Text(context.l10n.delete, style: TextStyle(color: Colors.red)),
             ),
           ],
         );
@@ -259,7 +259,7 @@ class _CommentsSheetState extends State<CommentsSheet> {
       if (mounted) {
         ScaffoldMessenger.of(
           context,
-        ).showSnackBar(SnackBar(content: Text("Failed to delete comment: $e")));
+        ).showSnackBar(SnackBar(content: Text(context.l10n.commentDeleteFailed)));
       }
     }
   }
@@ -278,8 +278,8 @@ class _CommentsSheetState extends State<CommentsSheet> {
           child: Column(
             children: [
               const SizedBox(height: 12),
-              const Text(
-                "Comments",
+              Text(
+                context.l10n.comments,
                 style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
               ),
               const Divider(),
@@ -290,7 +290,7 @@ class _CommentsSheetState extends State<CommentsSheet> {
                       .snapshots(),
                   builder: (context, snapshot) {
                     if (snapshot.hasError) {
-                      return Center(child: Text("Error: ${snapshot.error}"));
+                      return Center(child: Text(context.l10n.loadCommentsFailed));
                     }
 
                     if (snapshot.connectionState == ConnectionState.waiting) {
@@ -300,7 +300,7 @@ class _CommentsSheetState extends State<CommentsSheet> {
                     final comments = snapshot.data!.docs;
 
                     if (comments.isEmpty) {
-                      return const Center(child: Text("No comments yet"));
+                      return Center(child: Text(context.l10n.noCommentsYet));
                     }
 
                     return ListView.builder(
@@ -372,7 +372,7 @@ class _CommentsSheetState extends State<CommentsSheet> {
                                     );
                                   },
                             child: Text(
-                              fullName.isEmpty ? "User" : fullName,
+                              fullName.isEmpty ? context.l10n.user : fullName,
                               style: const TextStyle(
                                 fontWeight: FontWeight.bold,
                                 color: Color(0xff2b88b4),
@@ -391,18 +391,18 @@ class _CommentsSheetState extends State<CommentsSheet> {
                                   },
                                   itemBuilder: (context) => [
                                     if (isOwner)
-                                      const PopupMenuItem(
+                                      PopupMenuItem(
                                         value: "edit",
                                         child: Row(
                                           children: [
                                             Icon(Icons.edit, size: 18),
                                             SizedBox(width: 8),
-                                            Text("Edit"),
+                                            Text(context.l10n.edit),
                                           ],
                                         ),
                                       ),
                                     if (canDelete)
-                                      const PopupMenuItem(
+                                      PopupMenuItem(
                                         value: "delete",
                                         child: Row(
                                           children: [
@@ -413,7 +413,7 @@ class _CommentsSheetState extends State<CommentsSheet> {
                                             ),
                                             SizedBox(width: 8),
                                             Text(
-                                              "Delete",
+                                              context.l10n.delete,
                                               style: TextStyle(
                                                 color: Colors.red,
                                               ),
@@ -439,7 +439,7 @@ class _CommentsSheetState extends State<CommentsSheet> {
                       child: TextField(
                         controller: _commentCtrl,
                         decoration: InputDecoration(
-                          hintText: "Add a comment...",
+                          hintText: context.l10n.addComment,
                           border: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(12),
                           ),
@@ -449,7 +449,7 @@ class _CommentsSheetState extends State<CommentsSheet> {
                     const SizedBox(width: 8),
                     IconButton(
                       onPressed: _isSending ? null : _addComment,
-                      tooltip: 'Send comment',
+                      tooltip: context.l10n.sendComment,
                       icon: _isSending
                           ? const BusyIndicator()
                           : const Icon(Icons.send),

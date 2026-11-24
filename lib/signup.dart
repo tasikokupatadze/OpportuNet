@@ -115,7 +115,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
                       ),
                     ],
                     decoration: fieldDecoration(
-                      label: "Name",
+                      label: context.l10n.name,
                       icon: Icons.person_outline,
                       context: context,
                     ),
@@ -133,7 +133,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
                       ),
                     ],
                     decoration: fieldDecoration(
-                      label: "Surname",
+                      label: context.l10n.surname,
                       icon: Icons.badge_outlined,
                       context: context,
                     ),
@@ -151,7 +151,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
                       ),
                     ],
                     decoration: fieldDecoration(
-                      label: "Email",
+                      label: context.l10n.email,
                       icon: Icons.email_outlined,
                       context: context,
                     ),
@@ -164,7 +164,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
                     controller: pswrdctrl,
                     obscureText: _isPswrdHidden,
                     decoration: fieldDecoration(
-                      label: "Password",
+                      label: context.l10n.password,
                       icon: Icons.lock_outline,
                       context: context,
                     ).copyWith(
@@ -190,7 +190,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
                     controller: confirmPswrdctrl,
                     obscureText: _isPswrdHidden,
                     decoration: fieldDecoration(
-                      label: "Confirm password",
+                      label: context.l10n.confirmPassword,
                       icon: Icons.lock_outline,
                       context: context,
                     ).copyWith(
@@ -229,9 +229,9 @@ class _SignUpScreenState extends State<SignUpScreen> {
                           fontSize: 13,
                         ),
                         children: [
-                          const TextSpan(text: "I agree to the "),
+                          TextSpan(text: context.l10n.agreePrefix),
                           TextSpan(
-                            text: "Terms & Conditions",
+                            text: context.l10n.terms,
                             style: const TextStyle(
                               color: darkBrand,
                               fontWeight: FontWeight.bold,
@@ -243,9 +243,9 @@ class _SignUpScreenState extends State<SignUpScreen> {
                                 );
                               },
                           ),
-                          const TextSpan(text: " and "),
+                          TextSpan(text: context.l10n.and),
                           TextSpan(
-                            text: "Privacy Policy",
+                            text: context.l10n.privacyPolicy,
                             style: const TextStyle(
                               color: darkBrand,
                               fontWeight: FontWeight.bold,
@@ -276,8 +276,8 @@ class _SignUpScreenState extends State<SignUpScreen> {
                                   pswrdctrl.text.isEmpty ||
                                   signupemailctrl.text.trim().isEmpty) {
                                 ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(
-                                    content: Text("Please fill all fields."),
+                                  SnackBar(
+                                    content: Text(context.l10n.fillAllFields),
                                   ),
                                 );
                                 return;
@@ -286,9 +286,9 @@ class _SignUpScreenState extends State<SignUpScreen> {
                               if (!signupemailctrl.text.contains("@") ||
                                   !signupemailctrl.text.contains(".")) {
                                 ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(
+                                  SnackBar(
                                     content: Text(
-                                      "Please enter a valid email.",
+                                      context.l10n.invalidEmail,
                                     ),
                                   ),
                                 );
@@ -297,9 +297,9 @@ class _SignUpScreenState extends State<SignUpScreen> {
 
                               if (!isPasswordValid(pswrdctrl.text)) {
                                 ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(
+                                  SnackBar(
                                     content: Text(
-                                      "Password must contain at least 8 characters, one letter and one number.",
+                                      context.l10n.passwordRule,
                                     ),
                                   ),
                                 );
@@ -308,8 +308,8 @@ class _SignUpScreenState extends State<SignUpScreen> {
 
                               if (pswrdctrl.text != confirmPswrdctrl.text) {
                                 ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(
-                                    content: Text("Passwords do not match."),
+                                  SnackBar(
+                                    content: Text(context.l10n.passwordsDontMatch),
                                   ),
                                 );
                                 return;
@@ -317,9 +317,9 @@ class _SignUpScreenState extends State<SignUpScreen> {
 
                               if (!_acceptedTerms) {
                                 ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(
+                                  SnackBar(
                                     content: Text(
-                                      "You must accept the terms and privacy policy.",
+                                      context.l10n.mustAcceptTerms,
                                     ),
                                   ),
                                 );
@@ -362,17 +362,17 @@ class _SignUpScreenState extends State<SignUpScreen> {
                                 await showDialog(
                                   context: context,
                                   builder: (dialogContext) => AlertDialog(
-                                    title: const Text('Verify your email'),
-                                    content: const Text(
-                                      'We sent a verification link to your email address. Please verify your email before logging in.',
+                                    title: Text(context.l10n.verifyEmailTitle),
+                                    content: Text(
+                                      context.l10n.verifyEmailBody,
                                     ),
                                     actions: [
                                       TextButton(
                                         onPressed: () {
                                           Navigator.pop(dialogContext);
                                         },
-                                        child: const Text(
-                                          'OK',
+                                        child: Text(
+                                          context.l10n.ok,
                                           style: TextStyle(color: darkBrand),
                                         ),
                                       ),
@@ -384,15 +384,15 @@ class _SignUpScreenState extends State<SignUpScreen> {
                                 Navigator.pop(context);
                               } on FirebaseAuthException catch (e) {
                                 String message =
-                                    'Registration failed. Please try again.';
+                                    context.l10n.registrationFailed;
 
                                 if (e.code == 'email-already-in-use') {
-                                  message = 'This email is already registered.';
+                                  message = context.l10n.emailInUse;
                                 } else if (e.code == 'weak-password') {
                                   message =
-                                      'Please choose a stronger password.';
+                                      context.l10n.strongerPassword;
                                 } else if (e.code == 'invalid-email') {
-                                  message = 'Please enter a valid email.';
+                                  message = context.l10n.invalidEmail;
                                 }
 
                                 if (!context.mounted) return;
@@ -404,9 +404,9 @@ class _SignUpScreenState extends State<SignUpScreen> {
                                 if (!context.mounted) return;
 
                                 ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(
+                                  SnackBar(
                                     content: Text(
-                                      'Your account could not be fully created. Please try again.',
+                                      context.l10n.accountPartlyCreated,
                                     ),
                                   ),
                                 );
@@ -426,8 +426,8 @@ class _SignUpScreenState extends State<SignUpScreen> {
                       ),
                       child: _isSigningUp
                           ? const BusyIndicator()
-                          : const Text(
-                              "Create Account",
+                          : Text(
+                              context.l10n.createAccount,
                               style: TextStyle(
                                 fontSize: 17,
                                 fontWeight: FontWeight.bold,
@@ -444,7 +444,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
                       alignment: WrapAlignment.center,
                       crossAxisAlignment: WrapCrossAlignment.center,
                       children: [
-                        const Text("Already have an account? "),
+                        Text(context.l10n.haveAccount),
                         TextButton(
                           onPressed: _isSigningUp
                               ? null
@@ -456,8 +456,8 @@ class _SignUpScreenState extends State<SignUpScreen> {
                             minimumSize: const Size(48, 48),
                             tapTargetSize: MaterialTapTargetSize.padded,
                           ),
-                          child: const Text(
-                            "Log in",
+                          child: Text(
+                            context.l10n.logIn,
                             style: TextStyle(
                               color: darkBrand,
                               fontWeight: FontWeight.bold,
