@@ -328,6 +328,8 @@ class _SignUpScreenState extends State<SignUpScreen> {
 
                               setState(() => _isSigningUp = true);
                               try {
+                                await FirebaseAuth.instance.setLanguageCode(
+                                    context.appLanguageCode);
                                 final email = signupemailctrl.text.trim();
 
                                 final userCredential = await FirebaseAuth

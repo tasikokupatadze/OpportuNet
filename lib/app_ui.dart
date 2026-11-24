@@ -6,6 +6,11 @@ export 'l10n/app_localizations.dart';
 
 extension L10nContext on BuildContext {
   AppLocalizations get l10n => AppLocalizations.of(this)!;
+
+  /// "ka" or "en": the language the app is showing. Firebase Auth emails
+  /// (verification, password reset) are sent in this language.
+  String get appLanguageCode =>
+      Localizations.localeOf(this).languageCode == 'ka' ? 'ka' : 'en';
 }
 
 /// Community post categories are stored in English; this only changes the label.

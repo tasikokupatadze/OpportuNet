@@ -44,6 +44,7 @@ class _ResetPassScreenState extends State<ResetPassScreen> {
 
     setState(() => _isSending = true);
     try {
+      await FirebaseAuth.instance.setLanguageCode(context.appLanguageCode);
       await FirebaseAuth.instance.sendPasswordResetEmail(email: email);
 
       if (!mounted) return;
