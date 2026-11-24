@@ -51,18 +51,49 @@ const Map<String, IconData> kSubjectIcons = {
   "biology": Icons.biotech_rounded,
   "informatics": Icons.computer_rounded,
   "programming": Icons.code_rounded,
+  "astrophysics": Icons.public_rounded,
   "astronomy": Icons.public_rounded,
   "geography": Icons.map_rounded,
   "linguistics": Icons.translate_rounded,
   "english": Icons.translate_rounded,
   "economics": Icons.trending_up_rounded,
+  "other": Icons.more_horiz_rounded,
 };
+
+/// Subject keys offered in the Home filter sheet (kActivitySubjects,
+/// lowercased).
+const List<String> kFilterSubjects = [
+  "maths",
+  "physics",
+  "chemistry",
+  "biology",
+  "robotics",
+  "informatics",
+  "programming",
+  "astrophysics",
+  "linguistics",
+  "english",
+  "economics",
+  "other",
+];
+
+/// Whether a listing with [subjects] passes the subject filter [selected].
+/// "other" matches any subject outside [kFilterSubjects] (e.g. geography)
+/// as well as listings tagged "other" itself.
+bool matchesSubjectFilter(Set<String> subjects, Set<String> selected) {
+  if (selected.isEmpty) return true;
+  if (subjects.any(selected.contains)) return true;
+  return selected.contains("other") &&
+      subjects.any((s) => !kFilterSubjects.contains(s));
+}
 
 const Color _brand = brandBlue;
 const Color _brandDark = brandBlueDark;
 
 enum CostFilter { any, free, paid }
+
 enum SortBy { newest, deadline, title, cheapest }
+
 enum FeedLayout { grid, centered }
 
 String sortLabel(BuildContext context, SortBy sort) => switch (sort) {
@@ -139,6 +170,7 @@ Set<String> _subjectsOf(Map<String, dynamic> data) {
     "computer science": "informatics",
     "informatics olympiad": "informatics",
     "robotics olympiad": "robotics",
+    "astronomy": "astrophysics",
   };
 
   final subjects = <String>{};
@@ -163,6 +195,7 @@ String _subject(Map<String, dynamic> data) {
   final subjects = _subjectsOf(data);
   return subjects.isEmpty ? "" : subjects.first;
 }
+
 String _duration(Map<String, dynamic> data) =>
     _str(data, ["duration", "length", "programDuration"]);
 
@@ -187,7 +220,12 @@ Set<String> opportunitySubjects(Map<String, dynamic> data) => _subjectsOf(data);
 
 bool _isFree(String cost) {
   const freeValues = {
-    "0", "0.0", "0.00", "free", "free of charge", "no cost",
+    "0",
+    "0.0",
+    "0.00",
+    "free",
+    "free of charge",
+    "no cost",
   };
   return freeValues.contains(cost.toLowerCase().trim());
 }
@@ -241,10 +279,15 @@ class _HomeFeedState extends State<HomeFeed> {
           ? null
           : () => toggleSaved(context, data, save: !_isSaved(data));
 
+  /// Subjects are olympiad subjects: the filter is shown and applied only
+  /// while Olympiads are in view (no category chosen, or Olympiads chosen).
+  bool get _subjectFilterApplies =>
+      _categories.isEmpty || _categories.contains("olympiads");
+
   bool get _hasFilters =>
       _savedOnly ||
       _categories.isNotEmpty ||
-      _subjects.isNotEmpty ||
+      (_subjectFilterApplies && _subjects.isNotEmpty) ||
       _cost != CostFilter.any ||
       _myAge != null ||
       _sort != SortBy.deadline;
@@ -278,9 +321,10 @@ class _HomeFeedState extends State<HomeFeed> {
     if (_categories.isNotEmpty && !_categories.contains(category)) {
       return false;
     }
-    if (_subjects.isNotEmpty && !_subjectsOf(data).any(_subjects.contains)) {
-  return false;
-}
+    if (_subjectFilterApplies &&
+        !matchesSubjectFilter(_subjectsOf(data), _subjects)) {
+      return false;
+    }
     if (_cost == CostFilter.free && !_isFree(cost)) return false;
     if (_cost == CostFilter.paid && (cost.isEmpty || _isFree(cost))) {
       return false;
@@ -291,9 +335,22 @@ class _HomeFeedState extends State<HomeFeed> {
     if (query.isEmpty) return true;
 
     const fields = [
-      "title", "fullTitle", "fullName", "description", "subject", "field",
-      "duration", "length", "programDuration", "ageRequirements", "age",
-      "cost", "location", "country", "eligibility", "requirements",
+      "title",
+      "fullTitle",
+      "fullName",
+      "description",
+      "subject",
+      "field",
+      "duration",
+      "length",
+      "programDuration",
+      "ageRequirements",
+      "age",
+      "cost",
+      "location",
+      "country",
+      "eligibility",
+      "requirements",
     ];
 
     final searchable = fields
@@ -368,9 +425,8 @@ class _HomeFeedState extends State<HomeFeed> {
       child: StreamBuilder<List<Map<String, dynamic>>>(
         stream: _stream,
         builder: (context, snap) {
-          final items = (snap.data ?? <Map<String, dynamic>>[])
-              .where(_matches)
-              .toList();
+          final items =
+              (snap.data ?? <Map<String, dynamic>>[]).where(_matches).toList();
           _sortItems(items);
 
           return CustomScrollView(
@@ -391,8 +447,7 @@ class _HomeFeedState extends State<HomeFeed> {
                 SliverFillRemaining(
                   hasScrollBody: false,
                   child: LoadError(
-                    message:
-                        context.l10n.loadOpportunitiesFailed,
+                    message: context.l10n.loadOpportunitiesFailed,
                     onRetry: () =>
                         setState(() => _stream = _allOpportunities()),
                   ),
@@ -490,7 +545,8 @@ class _HomeFeedState extends State<HomeFeed> {
             child: ConstrainedBox(
               constraints: const BoxConstraints(minHeight: 48),
               child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
                 child: Row(
                   children: [
                     Icon(icon, size: 20, color: _brandDark),
@@ -517,8 +573,11 @@ class _HomeFeedState extends State<HomeFeed> {
           tile(const ValueKey('home-roadmaps-shortcut'), context.l10n.roadmaps,
               Icons.route_rounded, (_) => const RoadmapScreen()),
           const SizedBox(width: 8),
-          tile(const ValueKey('home-schools-shortcut'), context.l10n.schoolsInGeorgia,
-              Icons.school_rounded, (_) => const SchoolScreen()),
+          tile(
+              const ValueKey('home-schools-shortcut'),
+              context.l10n.schoolsInGeorgia,
+              Icons.school_rounded,
+              (_) => const SchoolScreen()),
         ],
       ),
     );
@@ -614,14 +673,16 @@ class _HomeFeedState extends State<HomeFeed> {
           onSelected: (value) => setState(() => _sort = value),
           itemBuilder: (_) => [
             for (final value in SortBy.values)
-              PopupMenuItem(value: value, child: Text(sortLabel(context, value))),
+              PopupMenuItem(
+                  value: value, child: Text(sortLabel(context, value))),
           ],
           child: Padding(
             padding: const EdgeInsets.symmetric(vertical: 12),
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Text(sortLabel(context, _sort), style: const TextStyle(fontSize: 13)),
+                Text(sortLabel(context, _sort),
+                    style: const TextStyle(fontSize: 13)),
                 const Icon(Icons.expand_more, size: 17),
               ],
             ),
@@ -717,7 +778,8 @@ class _HomeFeedState extends State<HomeFeed> {
               style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
             ),
             if (filtered)
-              TextButton(onPressed: _clearAll, child: Text(context.l10n.clearAll)),
+              TextButton(
+                  onPressed: _clearAll, child: Text(context.l10n.clearAll)),
           ],
         ),
       ),
@@ -776,38 +838,42 @@ class _HomeFeedState extends State<HomeFeed> {
                         ),
                     ],
                   ),
-                  const SizedBox(height: 16),
-                  Text(context.l10n.olympiadSubject, style: heading),
-                  Wrap(
-                    spacing: 8,
-                    children: [
-                     for (final subject in const [
-  "maths", "physics", "chemistry", "biology",
-  "robotics", "informatics", "programming", "astrophysics",
-  "linguistics", "english", "economics", "other",
-])
-                        FilterChip(
-                          avatar: Icon(kSubjectIcons[subject], size: 16),
-                          label: Text(subjectLabel(context, subject)),
-                          selected: _subjects.contains(subject),
-                          onSelected: (selected) => update(() {
-                            if (selected) {
-                              _subjects.add(subject);
-                            } else {
-                              _subjects.remove(subject);
-                            }
-                          }),
-                        ),
-                    ],
-                  ),
+                  if (_subjectFilterApplies) ...[
+                    const SizedBox(height: 16),
+                    Text(context.l10n.olympiadSubject, style: heading),
+                    Wrap(
+                      spacing: 8,
+                      children: [
+                        for (final subject in kFilterSubjects)
+                          FilterChip(
+                            avatar: Icon(kSubjectIcons[subject], size: 16),
+                            label: Text(subjectLabel(context, subject)),
+                            selected: _subjects.contains(subject),
+                            onSelected: (selected) => update(() {
+                              if (selected) {
+                                _subjects.add(subject);
+                              } else {
+                                _subjects.remove(subject);
+                              }
+                            }),
+                          ),
+                      ],
+                    ),
+                  ],
                   const SizedBox(height: 16),
                   Text(context.l10n.cost, style: heading),
                   const SizedBox(height: 8),
                   SegmentedButton<CostFilter>(
                     segments: [
-                      ButtonSegment(value: CostFilter.any, label: Text(context.l10n.costAny)),
-                      ButtonSegment(value: CostFilter.free, label: Text(context.l10n.free)),
-                      ButtonSegment(value: CostFilter.paid, label: Text(context.l10n.paid)),
+                      ButtonSegment(
+                          value: CostFilter.any,
+                          label: Text(context.l10n.costAny)),
+                      ButtonSegment(
+                          value: CostFilter.free,
+                          label: Text(context.l10n.free)),
+                      ButtonSegment(
+                          value: CostFilter.paid,
+                          label: Text(context.l10n.paid)),
                     ],
                     selected: {_cost},
                     onSelectionChanged: (values) =>
@@ -909,10 +975,10 @@ class OpportunityCard extends StatelessWidget {
     ];
 
     Widget logoFallback() => Icon(
-      category ?? Icons.school_outlined,
-      size: 25,
-      color: _brandDark,
-    );
+          category ?? Icons.school_outlined,
+          size: 25,
+          color: _brandDark,
+        );
 
     return Material(
       color: colors.surface,
@@ -966,7 +1032,9 @@ class OpportunityCard extends StatelessWidget {
                             ),
                           ),
                         Text(
-                          title.isEmpty ? context.l10n.untitledOpportunity : title,
+                          title.isEmpty
+                              ? context.l10n.untitledOpportunity
+                              : title,
                           style: TextStyle(
                             fontSize: 16,
                             fontWeight: FontWeight.w700,
@@ -1068,15 +1136,31 @@ class _DeadlineLabel extends StatelessWidget {
     final date = MaterialLocalizations.of(context).formatMediumDate(deadline);
 
     final (String text, Color bg, Color fg) = switch (days) {
-      < 0 => (context.l10n.deadlineClosed(date), colors.surfaceContainerHighest,
-          colors.onSurfaceVariant),
-      0 => (context.l10n.closesToday, colors.errorContainer,
-          colors.onErrorContainer),
-      1 => (context.l10n.closesTomorrow, colors.errorContainer,
-          colors.onErrorContainer),
-      <= 14 => (context.l10n.closesInDays(days, date), colors.errorContainer,
-          colors.onErrorContainer),
-      _ => (context.l10n.deadlineOn(date), Colors.transparent, colors.onSurface),
+      < 0 => (
+          context.l10n.deadlineClosed(date),
+          colors.surfaceContainerHighest,
+          colors.onSurfaceVariant
+        ),
+      0 => (
+          context.l10n.closesToday,
+          colors.errorContainer,
+          colors.onErrorContainer
+        ),
+      1 => (
+          context.l10n.closesTomorrow,
+          colors.errorContainer,
+          colors.onErrorContainer
+        ),
+      <= 14 => (
+          context.l10n.closesInDays(days, date),
+          colors.errorContainer,
+          colors.onErrorContainer
+        ),
+      _ => (
+          context.l10n.deadlineOn(date),
+          Colors.transparent,
+          colors.onSurface
+        ),
     };
 
     return Container(
@@ -1089,7 +1173,8 @@ class _DeadlineLabel extends StatelessWidget {
       ),
       child: Text(
         text,
-        style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600, color: fg),
+        style:
+            TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600, color: fg),
       ),
     );
   }
