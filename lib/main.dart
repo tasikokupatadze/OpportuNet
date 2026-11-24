@@ -707,80 +707,14 @@ class _HomeScreenState extends State<HomeScreen> {
                                   ),
                                 )
                               else
-                                Align(
-                                  alignment: Alignment.centerLeft,
-                                  child: Container(
-                                    margin: EdgeInsets.symmetric(vertical: 4),
-                                    padding: EdgeInsets.all(12),
-                                    constraints: BoxConstraints(
-                                      maxWidth:
-                                          MediaQuery.of(context).size.width *
-                                              0.75,
-                                    ),
-                                    decoration: BoxDecoration(
-                                      color:
-                                          Theme.of(context).colorScheme.surface,
-                                      borderRadius: BorderRadius.circular(18),
-                                      border: Border.all(
-                                        color: Colors.grey.shade300,
-                                      ),
-                                    ),
-                                    child: MarkdownBody(
-                                      data: aiResponse.toString(),
-                                      styleSheet: MarkdownStyleSheet(
-                                        p: TextStyle(
-                                          color: Theme.of(context)
-                                              .colorScheme
-                                              .onSurface,
-                                          fontSize: 14,
-                                          height: 1.5,
-                                        ),
-                                        h1: TextStyle(
-                                          color: Theme.of(context)
-                                              .colorScheme
-                                              .onSurface,
-                                          fontSize: 22,
-                                          fontWeight: FontWeight.bold,
-                                        ),
-                                        h2: TextStyle(
-                                          color: Theme.of(context)
-                                              .colorScheme
-                                              .onSurface,
-                                          fontSize: 19,
-                                          fontWeight: FontWeight.bold,
-                                        ),
-                                        h3: TextStyle(
-                                          color: Theme.of(context)
-                                              .colorScheme
-                                              .onSurface,
-                                          fontSize: 16,
-                                          fontWeight: FontWeight.bold,
-                                        ),
-                                        listBullet: TextStyle(
-                                          color: Theme.of(context)
-                                              .colorScheme
-                                              .onSurface,
-                                          fontSize: 14,
-                                        ),
-                                        code: TextStyle(
-                                          color: Theme.of(context)
-                                              .colorScheme
-                                              .onSurface,
-                                          backgroundColor: Theme.of(context)
-                                              .colorScheme
-                                              .surfaceContainerHighest,
-                                          fontSize: 13,
-                                        ),
-                                        codeblockDecoration: BoxDecoration(
-                                          color: Theme.of(context)
-                                              .colorScheme
-                                              .surfaceContainerHighest,
-                                          borderRadius: BorderRadius.circular(
-                                            8,
-                                          ),
-                                        ),
-                                      ),
-                                    ),
+                                Padding(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 16,
+                                    vertical: 8,
+                                  ),
+                                  child: _AiReply(
+                                    key: ValueKey(doc.id),
+                                    text: aiResponse.toString(),
                                   ),
                                 ),
                             ],
@@ -959,10 +893,12 @@ class _HomeScreenState extends State<HomeScreen> {
                                       accent: Colors.red,
                                       title: "Log out",
                                       subtitle: "Leave account",
-                                     onTap: () async {
-                                        final messenger = ScaffoldMessenger.of(context);
+                                      onTap: () async {
+                                        final messenger =
+                                            ScaffoldMessenger.of(context);
                                         try {
-                                          await NotificationService.instance.signOut();
+                                          await NotificationService.instance
+                                              .signOut();
                                         } catch (_) {
                                           messenger.showSnackBar(
                                             const SnackBar(
@@ -1190,6 +1126,55 @@ class _HomeScreenState extends State<HomeScreen> {
           ],
         ),
       ),
+    );
+  }
+}
+
+class _AiReply extends StatelessWidget {
+  const _AiReply({super.key, required this.text});
+
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final compact = constraints.maxWidth <= 480;
+        final bodyStyle = TextStyle(
+          color: colors.onSurface,
+          fontSize: compact ? 13 : 14,
+          height: compact ? 1.35 : 1.5,
+          letterSpacing: compact ? 0 : null,
+        );
+
+        TextStyle heading(double size) => TextStyle(
+              color: colors.onSurface,
+              fontSize: size,
+              fontWeight: FontWeight.bold,
+            );
+
+        return MarkdownBody(
+          data: text,
+          styleSheet: MarkdownStyleSheet(
+            p: bodyStyle,
+            h1: heading(compact ? 18 : 22),
+            h2: heading(compact ? 16 : 19),
+            h3: heading(compact ? 14 : 16),
+            listBullet: bodyStyle,
+            code: TextStyle(
+              color: colors.onSurface,
+              backgroundColor: colors.surfaceContainerHighest,
+              fontSize: compact ? 12 : 13,
+            ),
+            codeblockDecoration: BoxDecoration(
+              color: colors.surfaceContainerHighest,
+              borderRadius: BorderRadius.circular(8),
+            ),
+          ),
+        );
+      },
     );
   }
 }

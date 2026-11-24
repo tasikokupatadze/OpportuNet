@@ -25,7 +25,7 @@ class _AddActivityScreenState extends State<AddActivityScreen> {
   final _websitectrl = TextEditingController();
   final _agectrl = TextEditingController();
   final _costctrl = TextEditingController();
-  String? _selectedSubject;
+  Set<String> _selectedSubjects = {};
 
   final List<String> _subjects = [
     "Maths",
@@ -104,12 +104,15 @@ class _AddActivityScreenState extends State<AddActivityScreen> {
     final website = _websitectrl.text.trim();
     final age = _agectrl.text.trim();
     final cost = _costctrl.text.trim();
-    final subject = _selectedSubject;
+    final subjects = _subjects
+        .where(_selectedSubjects.contains)
+        .map((subject) => subject.toLowerCase())
+        .toList();
 
     if (title.isEmpty ||
         description.isEmpty ||
         website.isEmpty ||
-        subject == null ||
+        subjects.isEmpty ||
         cost.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text("Please fill in all required fields.")),
@@ -144,7 +147,8 @@ class _AddActivityScreenState extends State<AddActivityScreen> {
         "title": title,
         "description": description,
         "website": website,
-        "subject": subject.toLowerCase(),
+        "subjects": subjects,
+        "subject": subjects.first,
         "ageRequirements": age,
         "cost": cost,
         "imageUrl": imageUrl,
@@ -282,20 +286,71 @@ class _AddActivityScreenState extends State<AddActivityScreen> {
             ),
             const SizedBox(height: 16),
 
-            DropdownButtonFormField<String>(
-              initialValue: _selectedSubject,
-              decoration: const InputDecoration(
-                labelText: "Subject",
-                border: OutlineInputBorder(),
+            InkWell(
+              onTap: _isPublishing
+                  ? null
+                  : () async {
+                      final draft = Set<String>.of(_selectedSubjects);
+
+                      final result = await showDialog<Set<String>>(
+                        context: context,
+                        builder: (dialogContext) => StatefulBuilder(
+                          builder: (context, updateDialog) => AlertDialog(
+                            title: const Text("Select subjects"),
+                            scrollable: true,
+                            contentPadding:
+                                const EdgeInsets.fromLTRB(12, 8, 12, 0),
+                            content: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                for (final subject in _subjects)
+                                  CheckboxListTile(
+                                    title: Text(subject),
+                                    value: draft.contains(subject),
+                                    controlAffinity:
+                                        ListTileControlAffinity.leading,
+                                    onChanged: (checked) {
+                                      updateDialog(() {
+                                        if (checked == true) {
+                                          draft.add(subject);
+                                        } else {
+                                          draft.remove(subject);
+                                        }
+                                      });
+                                    },
+                                  ),
+                              ],
+                            ),
+                            actions: [
+                              TextButton(
+                                onPressed: () => Navigator.pop(dialogContext),
+                                child: const Text("Cancel"),
+                              ),
+                              FilledButton(
+                                onPressed: () =>
+                                    Navigator.pop(dialogContext, draft),
+                                child: const Text("Done"),
+                              ),
+                            ],
+                          ),
+                        ),
+                      );
+
+                      if (!mounted || result == null) return;
+                      setState(() => _selectedSubjects = result);
+                    },
+              child: InputDecorator(
+                decoration: const InputDecoration(
+                  labelText: "Subjects",
+                  border: OutlineInputBorder(),
+                  suffixIcon: Icon(Icons.arrow_drop_down),
+                ),
+                child: Text(
+                  _selectedSubjects.isEmpty
+                      ? "Choose subjects"
+                      : _subjects.where(_selectedSubjects.contains).join(", "),
+                ),
               ),
-              items: _subjects.map((subject) {
-                return DropdownMenuItem(value: subject, child: Text(subject));
-              }).toList(),
-              onChanged: (value) {
-                setState(() {
-                  _selectedSubject = value;
-                });
-              },
             ),
 
             const SizedBox(height: 16),

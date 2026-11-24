@@ -22,6 +22,59 @@ class _CommentsSheetState extends State<CommentsSheet> {
 
   bool _isOrganizer = false;
   bool _isSending = false;
+  final _expandedComments = <String>{};
+
+  Widget _commentBody(String id, String text) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        if (constraints.maxWidth > 480) return Text(text);
+
+        const previewLines = 5;
+        final style = DefaultTextStyle.of(context).style.copyWith(
+              fontSize: 13,
+              height: 1.35,
+              letterSpacing: 0,
+            );
+
+        final painter = TextPainter(
+          text: TextSpan(text: text, style: style),
+          textDirection: Directionality.of(context),
+          textScaler: MediaQuery.textScalerOf(context),
+          locale: Localizations.maybeLocaleOf(context),
+          maxLines: previewLines,
+          ellipsis: '…',
+        )..layout(maxWidth: constraints.maxWidth);
+
+        final needsToggle = painter.didExceedMaxLines;
+        painter.dispose();
+
+        if (!needsToggle) return Text(text, style: style);
+
+        final expanded = _expandedComments.contains(id);
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              text,
+              style: style,
+              maxLines: expanded ? null : previewLines,
+              overflow: expanded ? TextOverflow.visible : TextOverflow.ellipsis,
+            ),
+            TextButton(
+              onPressed: () => setState(() {
+                if (expanded) {
+                  _expandedComments.remove(id);
+                } else {
+                  _expandedComments.add(id);
+                }
+              }),
+              child: Text(expanded ? 'See less' : 'See more'),
+            ),
+          ],
+        );
+      },
+    );
+  }
 
   CollectionReference get _commentsRef => FirebaseFirestore.instance
       .collection("posts")
@@ -95,8 +148,9 @@ class _CommentsSheetState extends State<CommentsSheet> {
         "commentsCount": FieldValue.increment(1),
       }, SetOptions(merge: true));
 
-      if (mounted && _commentCtrl.text.trim() == commentText)
-        {_commentCtrl.clear();}
+      if (mounted && _commentCtrl.text.trim() == commentText) {
+        _commentCtrl.clear();
+      }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context)
@@ -325,7 +379,7 @@ class _CommentsSheetState extends State<CommentsSheet> {
                               ),
                             ),
                           ),
-                          subtitle: Text(commentText),
+                          subtitle: _commentBody(commentDoc.id, commentText),
                           trailing: (isOwner || canDelete)
                               ? PopupMenuButton<String>(
                                   onSelected: (value) {

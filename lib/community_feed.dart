@@ -463,7 +463,7 @@ class _PinnedFilters extends SliverPersistentHeaderDelegate {
 class PostCard extends StatelessWidget {
   final QueryDocumentSnapshot post;
   final bool isOrganizer;
- const PostCard({super.key, required this.post, required this.isOrganizer});
+  const PostCard({super.key, required this.post, required this.isOrganizer});
 
   void _openProfile(BuildContext context, String uid) {
     if (uid.isEmpty) {
@@ -682,17 +682,11 @@ class PostCard extends StatelessWidget {
           ),
 
           // Post text: outside the header Row.
+          // Post text
           if (text.isNotEmpty)
             Padding(
-              padding: EdgeInsets.fromLTRB(14, 10, 14, 0),
-              child: Text(
-                text,
-                style: TextStyle(
-                  fontSize: 15,
-                  height: 1.45,
-                  color: Theme.of(context).colorScheme.onSurface,
-                ),
-              ),
+              padding: const EdgeInsets.fromLTRB(14, 10, 14, 0),
+              child: _PostBody(key: ValueKey(post.id), text: text),
             ),
 
           // Post image: outside the header Row.
@@ -847,5 +841,67 @@ class PostCard extends StatelessWidget {
     if (diff.inHours < 24) return "${diff.inHours}h";
     if (diff.inDays < 7) return "${diff.inDays}d";
     return "${d.day}/${d.month}/${d.year}";
+  }
+}
+
+class _PostBody extends StatefulWidget {
+  const _PostBody({super.key, required this.text});
+
+  final String text;
+
+  @override
+  State<_PostBody> createState() => _PostBodyState();
+}
+
+class _PostBodyState extends State<_PostBody> {
+  static const int _previewLines = 5;
+  bool _expanded = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final compact = constraints.maxWidth <= 480;
+        final style = DefaultTextStyle.of(context).style.copyWith(
+              fontSize: compact ? 13.0 : 15.0,
+              height: compact ? 1.35 : 1.45,
+              letterSpacing: 0.0,
+              color: Theme.of(context).colorScheme.onSurface,
+            );
+
+        if (!compact) return Text(widget.text, style: style);
+
+        final painter = TextPainter(
+          text: TextSpan(text: widget.text, style: style),
+          textDirection: Directionality.of(context),
+          textScaler: MediaQuery.textScalerOf(context),
+          locale: Localizations.maybeLocaleOf(context),
+          maxLines: _previewLines,
+          ellipsis: '…',
+        )..layout(maxWidth: constraints.maxWidth);
+
+        final needsToggle = painter.didExceedMaxLines;
+        painter.dispose();
+
+        if (!needsToggle) return Text(widget.text, style: style);
+
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              widget.text,
+              style: style,
+              maxLines: _expanded ? null : _previewLines,
+              overflow:
+                  _expanded ? TextOverflow.visible : TextOverflow.ellipsis,
+            ),
+            TextButton(
+              onPressed: () => setState(() => _expanded = !_expanded),
+              child: Text(_expanded ? 'See less' : 'See more'),
+            ),
+          ],
+        );
+      },
+    );
   }
 }

@@ -1,15 +1,13 @@
-import 'app_ui.dart';
-
 import 'dart:async';
 
-import 'package:material_ui/material_ui.dart';
-import 'package:flutter/rendering.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:material_ui/material_ui.dart';
 
-import 'calendar.dart';
 import 'activitydetails.dart';
-import 'roadmaps.dart';
+import 'app_ui.dart';
+import 'calendar.dart';
 import 'extracurriculars.dart';
+import 'roadmaps.dart';
 import 'schools.dart';
 
 const Map<String, (String, IconData)> kCategories = {
@@ -37,11 +35,25 @@ const Map<String, IconData> kSubjectIcons = {
   "economics": Icons.trending_up_rounded,
 };
 
+const Color _brand = Color(0xff84d6fe);
+const Color _brandDark = Color(0xff2b88b4);
+
+enum CostFilter { any, free, paid }
+enum SortBy { newest, deadline, title, cheapest }
+enum FeedLayout { grid, centered }
+
+const Map<SortBy, String> kSortLabels = {
+  SortBy.newest: "Newest",
+  SortBy.deadline: "Deadline",
+  SortBy.title: "A–Z",
+  SortBy.cheapest: "Free first",
+};
+
 Stream<List<Map<String, dynamic>>> _allOpportunities() {
   final latest = <String, List<Map<String, dynamic>>>{};
   final failures = <String, Object>{};
-  late final StreamController<List<Map<String, dynamic>>> ctrl;
   final subs = <StreamSubscription>[];
+  late final StreamController<List<Map<String, dynamic>>> ctrl;
 
   void emit() {
     if (failures.isNotEmpty) {
@@ -59,7 +71,7 @@ Stream<List<Map<String, dynamic>>> _allOpportunities() {
             (snap) {
               failures.remove(name);
               latest[name] = snap.docs
-                  .map((d) => {...d.data(), kCategoryField: name})
+                  .map((doc) => {...doc.data(), kCategoryField: name})
                   .toList();
               emit();
             },
@@ -72,42 +84,27 @@ Stream<List<Map<String, dynamic>>> _allOpportunities() {
       }
     },
     onCancel: () {
-      for (final s in subs) {
-        s.cancel();
+      for (final sub in subs) {
+        sub.cancel();
       }
     },
   );
+
   return ctrl.stream;
 }
 
-const Color _brand = Color(0xff84d6fe);
-const Color _brandDark = Color(0xff2b88b4);
-
-enum CostFilter { any, free, paid }
-
-enum SortBy { newest, deadline, title, cheapest }
-
-const Map<SortBy, String> kSortLabels = {
-  SortBy.newest: "Newest",
-  SortBy.deadline: "Deadline",
-  SortBy.title: "A–Z",
-  SortBy.cheapest: "Free first",
-};
-
-enum FeedLayout { grid, centered }
-
-String _str(Map<String, dynamic> d, List<String> keys) {
-  for (final k in keys) {
-    final v = d[k];
-    if (v != null && v.toString().trim().isNotEmpty) return v.toString().trim();
+String _str(Map<String, dynamic> data, List<String> keys) {
+  for (final key in keys) {
+    final value = data[key]?.toString().trim();
+    if (value != null && value.isNotEmpty) return value;
   }
   return "";
 }
 
-String _subject(Map<String, dynamic> d) {
-  final value = _str(d, ["subject", "field"]);
-  final normalized = value.toLowerCase().trim();
+String _title(Map<String, dynamic> data) =>
+    _str(data, ["fullTitle", "fullName", "title"]);
 
+Set<String> _subjectsOf(Map<String, dynamic> data) {
   const aliases = {
     "math": "maths",
     "mathematics": "maths",
@@ -120,41 +117,62 @@ String _subject(Map<String, dynamic> d) {
     "robotics olympiad": "robotics",
   };
 
-  return aliases[normalized] ?? normalized;
+  final subjects = <String>{};
+
+  for (final field in ["subjects", "subject", "field"]) {
+    final value = data[field];
+    final entries = value is List ? value : [value];
+
+    for (final entry in entries.whereType<String>()) {
+      for (final part in entry.split(',')) {
+        final name = part.trim().toLowerCase();
+        if (name.isNotEmpty) subjects.add(aliases[name] ?? name);
+      }
+    }
+  }
+
+  return subjects;
 }
 
-String _duration(Map<String, dynamic> d) =>
-    _str(d, ["duration", "length", "programDuration"]);
+// The existing card uses the first subject for its tag.
+String _subject(Map<String, dynamic> data) {
+  final subjects = _subjectsOf(data);
+  return subjects.isEmpty ? "" : subjects.first;
+}
+String _duration(Map<String, dynamic> data) =>
+    _str(data, ["duration", "length", "programDuration"]);
 
-DateTime? _date(dynamic v) {
-  if (v is Timestamp) return v.toDate();
-  if (v is DateTime) return v;
-  if (v is String) return DateTime.tryParse(v);
+String _capitalize(String text) =>
+    text.isEmpty ? text : text[0].toUpperCase() + text.substring(1);
+
+DateTime? _date(dynamic value) {
+  if (value is Timestamp) return value.toDate();
+  if (value is DateTime) return value;
+  if (value is String) return DateTime.tryParse(value.trim());
   return null;
 }
 
+DateTime? _deadline(Map<String, dynamic> data) =>
+    _date(data["deadline"]) ?? _date(data["registrationDeadline"]);
+
 bool _isFree(String cost) {
-  final c = cost.toLowerCase().trim();
-  return c == '0' ||
-      c == '0.0' ||
-      c == '0.00' ||
-      c == 'free' ||
-      c == 'free of charge' ||
-      c == 'no cost';
+  const freeValues = {
+    "0", "0.0", "0.00", "free", "free of charge", "no cost",
+  };
+  return freeValues.contains(cost.toLowerCase().trim());
 }
 
 double _costValue(String cost) {
   if (cost.trim().isEmpty) return double.infinity;
   if (_isFree(cost)) return 0;
-  final m = RegExp(r'\d+(\.\d+)?').firstMatch(cost.replaceAll(",", ""));
-  return m == null ? double.infinity : double.parse(m.group(0)!);
-}
 
-String _capitalize(String s) =>
-    s.isEmpty ? s : s[0].toUpperCase() + s.substring(1);
+  final match = RegExp(r'\d+(\.\d+)?').firstMatch(cost.replaceAll(",", ""));
+  return match == null ? double.infinity : double.parse(match.group(0)!);
+}
 
 class HomeFeed extends StatefulWidget {
   final bool isOrganizer;
+
   const HomeFeed({super.key, required this.isOrganizer});
 
   @override
@@ -163,16 +181,16 @@ class HomeFeed extends StatefulWidget {
 
 class _HomeFeedState extends State<HomeFeed> {
   final _searchCtrl = TextEditingController();
-  String _query = "";
-  late Stream<List<Map<String, dynamic>>> _stream = _allOpportunities();
   final Set<String> _categories = {};
   final Set<String> _subjects = {};
+
+  late Stream<List<Map<String, dynamic>>> _stream = _allOpportunities();
+
+  String _query = "";
   CostFilter _cost = CostFilter.any;
   SortBy _sort = SortBy.newest;
   FeedLayout _layout = FeedLayout.grid;
   int? _myAge;
-
-  bool _showSearch = true;
 
   bool get _hasFilters =>
       _categories.isNotEmpty ||
@@ -192,64 +210,54 @@ class _HomeFeedState extends State<HomeFeed> {
         .allMatches(age)
         .map((m) => int.parse(m.group(0)!))
         .toList();
+
     if (nums.isEmpty) return true;
     if (nums.length == 1) {
-      return age.contains("+") ? me >= nums[0] : me == nums[0];
+      return age.contains("+") ? me >= nums.first : me == nums.first;
     }
     return me >= nums[0] && me <= nums[1];
   }
 
-  bool _matches(Map<String, dynamic> d) {
-    final cat = (d[kCategoryField] ?? "").toString();
-    final cost = (d["cost"] ?? "").toString();
-    final age = (d["ageRequirements"] ?? d["age"] ?? "").toString();
-    final subject = _subject(d);
+  bool _matches(Map<String, dynamic> data) {
+    final category = _str(data, [kCategoryField]);
+    final cost = _str(data, ["cost"]);
+    final age = _str(data, ["ageRequirements", "age"]);
 
-    final searchableText = [
-      d["title"],
-      d["description"],
-      d["subject"],
-      d["field"],
-      d["duration"],
-      d["length"],
-      d["programDuration"],
-      d["ageRequirements"],
-      d["age"],
-      d["cost"],
-      d["location"],
-      d["country"],
-      d["eligibility"],
-      d["requirements"],
-    ].where((v) => v != null).join(" ").toLowerCase();
-
-    final normalizedQuery = _query.toLowerCase().trim().replaceAll(
-          RegExp(r'\s+'),
-          ' ',
-        );
-
-    if (normalizedQuery.isNotEmpty &&
-        !searchableText.contains(normalizedQuery)) {
+    if (_categories.isNotEmpty && !_categories.contains(category)) {
       return false;
     }
-
-    if (_categories.isNotEmpty && !_categories.contains(cat)) return false;
-
-    if (_subjects.isNotEmpty && !_subjects.contains(subject)) {
-      return false;
-    }
-
+    if (_subjects.isNotEmpty && !_subjectsOf(data).any(_subjects.contains)) {
+  return false;
+}
     if (_cost == CostFilter.free && !_isFree(cost)) return false;
-    if (_cost == CostFilter.paid && (cost.trim().isEmpty || _isFree(cost)))
-      {return false;}
-
+    if (_cost == CostFilter.paid && (cost.isEmpty || _isFree(cost))) {
+      return false;
+    }
     if (_myAge != null && !_ageFits(age, _myAge!)) return false;
 
-    return true;
+    final query = _query.toLowerCase().replaceAll(RegExp(r'\s+'), ' ').trim();
+    if (query.isEmpty) return true;
+
+    const fields = [
+      "title", "fullTitle", "fullName", "description", "subject", "field",
+      "duration", "length", "programDuration", "ageRequirements", "age",
+      "cost", "location", "country", "eligibility", "requirements",
+    ];
+
+    final searchable = fields
+        .map((field) => data[field])
+        .where((value) => value != null)
+        .join(" ")
+        .toLowerCase()
+        .replaceAll(RegExp(r'\s+'), ' ');
+
+    return searchable.contains(query);
   }
 
   void _sortItems(List<Map<String, dynamic>> items) {
-    int newest(Map a, Map b) {
-      final ta = _date(a["createdAt"]), tb = _date(b["createdAt"]);
+    int newest(Map<String, dynamic> a, Map<String, dynamic> b) {
+      final ta = _date(a["createdAt"]);
+      final tb = _date(b["createdAt"]);
       if (ta == null && tb == null) return 0;
       if (ta == null) return 1;
       if (tb == null) return -1;
@@ -259,248 +267,113 @@ class _HomeFeedState extends State<HomeFeed> {
     switch (_sort) {
       case SortBy.newest:
         items.sort(newest);
+        break;
+
+      case SortBy.title:
+        items.sort((a, b) =>
+            _title(a).toLowerCase().compareTo(_title(b).toLowerCase()));
+        break;
+
+      case SortBy.cheapest:
+        items.sort((a, b) => _costValue(_str(a, ["cost"]))
+            .compareTo(_costValue(_str(b, ["cost"]))));
+        break;
+
       case SortBy.deadline:
         final now = DateTime.now();
-        DateTime? dl(Map d) {
-          final v = _date(
-            d["deadline"] ?? d["registrationDeadline"] ?? d["date"],
-          );
-          return (v != null && v.isAfter(now)) ? v : null;
+        DateTime? upcoming(Map<String, dynamic> data) {
+          final date = _deadline(data) ?? _date(data["date"]);
+          return date != null && date.isAfter(now) ? date : null;
         }
+
         items.sort((a, b) {
-          final da = dl(a), db = dl(b);
+          final da = upcoming(a);
+          final db = upcoming(b);
           if (da == null && db == null) return newest(a, b);
           if (da == null) return 1;
           if (db == null) return -1;
           return da.compareTo(db);
         });
-      case SortBy.title:
-        items.sort(
-          (a, b) => (a["title"] ?? "").toString().toLowerCase().compareTo(
-                (b["title"] ?? "").toString().toLowerCase(),
-              ),
-        );
-      case SortBy.cheapest:
-        items.sort(
-          (a, b) => _costValue((a["cost"] ?? "").toString())
-              .compareTo(_costValue((b["cost"] ?? "").toString())),
-        );
+        break;
     }
   }
 
-  void _clearAll() => setState(() {
-        _categories.clear();
-        _subjects.clear();
-        _cost = CostFilter.any;
-        _sort = SortBy.newest;
-        _myAge = null;
-        _searchCtrl.clear();
-        _query = "";
-      });
-
-  bool _onScroll(UserScrollNotification n) {
-    if (n.metrics.axis != Axis.vertical) return false;
-    if (n.direction == ScrollDirection.reverse && _showSearch) {
-      setState(() => _showSearch = false);
-    } else if (n.direction == ScrollDirection.forward && !_showSearch) {
-      setState(() => _showSearch = true);
-    }
-    return false;
+  void _clearAll() {
+    setState(() {
+      _categories.clear();
+      _subjects.clear();
+      _cost = CostFilter.any;
+      _sort = SortBy.newest;
+      _myAge = null;
+      _query = "";
+      _searchCtrl.clear();
+    });
   }
 
   @override
   Widget build(BuildContext context) {
-    final dark = Theme.of(context).brightness == Brightness.dark;
-    final surface = dark ? const Color(0xff1e2228) : const Color(0xfff3f6f9);
-
     return ContentWidth(
-      child: Column(
-        children: [
-          ClipRect(
-            child: AnimatedAlign(
-              duration: const Duration(milliseconds: 220),
-              curve: Curves.easeOut,
-              alignment: Alignment.bottomCenter,
-              heightFactor: _showSearch ? 1 : 0,
-              child: AnimatedOpacity(
-                duration: const Duration(milliseconds: 180),
-                opacity: _showSearch ? 1 : 0,
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    _topButtons(),
-                    _searchRow(surface),
-                    _categoryChips(),
-                  ],
+      child: StreamBuilder<List<Map<String, dynamic>>>(
+        stream: _stream,
+        builder: (context, snap) {
+          final items = (snap.data ?? <Map<String, dynamic>>[])
+              .where(_matches)
+              .toList();
+          _sortItems(items);
+
+          return CustomScrollView(
+            keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+            slivers: [
+              SliverToBoxAdapter(child: _searchRow()),
+              SliverToBoxAdapter(child: _categoryChips()),
+              SliverPadding(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                sliver: SliverToBoxAdapter(
+                  child: _feedHeader(
+                    snap.hasData && !snap.hasError ? items.length : null,
+                  ),
                 ),
               ),
-            ),
-          ),
-
-          // Feed
-          Expanded(
-            child: StreamBuilder<List<Map<String, dynamic>>>(
-              stream: _stream,
-              builder: (context, snap) {
-                if (snap.hasError) {
-                  return LoadError(
+              if (snap.hasError)
+                SliverFillRemaining(
+                  hasScrollBody: false,
+                  child: LoadError(
                     message:
                         "Couldn't load opportunities. Check your connection and try again.",
                     onRetry: () =>
                         setState(() => _stream = _allOpportunities()),
-                  );
-                }
-                if (!snap.hasData) {
-                  return const Center(child: CircularProgressIndicator());
-                }
-                final items = snap.data!.where(_matches).toList();
-                _sortItems(items);
-
-                if (items.isEmpty) return _emptyState();
-
-                return NotificationListener<UserScrollNotification>(
-                  onNotification: _onScroll,
-                  child: CustomScrollView(
-                    slivers: [
-                      SliverPadding(
-                        padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
-                        sliver: SliverToBoxAdapter(
-                          child: _feedHeader(items.length, dark),
-                        ),
-                      ),
-                      _layout == FeedLayout.grid
-                          ? _gridSliver(items)
-                          : _centeredSliver(items),
-                    ],
                   ),
-                );
-              },
-            ),
-          ),
-        ],
+                )
+              else if (!snap.hasData)
+                const SliverFillRemaining(
+                  hasScrollBody: false,
+                  child: Center(child: CircularProgressIndicator()),
+                )
+              else if (items.isEmpty)
+                SliverFillRemaining(
+                  hasScrollBody: false,
+                  child: _emptyState(),
+                )
+              else
+                _opportunitiesSliver(items),
+            ],
+          );
+        },
       ),
     );
   }
 
-  Widget _topButtons() {
-    final shortcutStyle = OutlinedButton.styleFrom(
-      backgroundColor: Colors.white,
-      foregroundColor: const Color(0xff17658b),
-      minimumSize: const Size(48, 48),
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 12),
-      side: const BorderSide(color: _brand),
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16),
-      ),
-    );
-    const shortcutTextStyle =
-        TextStyle(fontSize: 16, fontWeight: FontWeight.bold);
+  Widget _searchRow() {
+    final colors = Theme.of(context).colorScheme;
 
     return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 14, 16, 8),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          IntrinsicHeight(
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Expanded(
-                  child: OutlinedButton.icon(
-                    key: const ValueKey('home-schools-shortcut'),
-                    style: shortcutStyle,
-                    onPressed: () => Navigator.push(
-                      context,
-                      MaterialPageRoute(builder: (_) => const SchoolScreen()),
-                    ),
-                    icon: const Icon(Icons.school_outlined, size: 20),
-                    label: const Text(
-                      'Best Schools in Georgia',
-                      textAlign: TextAlign.center,
-                      style: shortcutTextStyle,
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: OutlinedButton.icon(
-                    style: shortcutStyle,
-                    onPressed: () => Navigator.push(
-                      context,
-                      MaterialPageRoute(builder: (_) => const RoadmapScreen()),
-                    ),
-                    icon: const Icon(Icons.route_rounded, size: 20),
-                    label: const Text(
-                      'Roadmaps',
-                      textAlign: TextAlign.center,
-                      style: shortcutTextStyle,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 10),
-          OutlinedButton.icon(
-            key: const ValueKey('home-calendar-shortcut'),
-            style: shortcutStyle,
-            onPressed: () => Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (_) => CalendarScreen(isOrganizer: widget.isOrganizer),
-              ),
-            ),
-            icon: const Icon(Icons.calendar_month, size: 20),
-            label: const Text(
-              'Academic Calendar',
-              textAlign: TextAlign.center,
-              style: shortcutTextStyle,
-            ),
-          ),
-
-          // Only organizers can see this button.
-          if (widget.isOrganizer) ...[
-            const SizedBox(height: 10),
-            SizedBox(
-              // Let labels grow with text scaling.
-              child: ElevatedButton.icon(
-                onPressed: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => const AddActivityScreen(),
-                    ),
-                  );
-                },
-                icon: const Icon(Icons.add),
-                label: const Text(
-                  "Add Extracurricular",
-                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
-                ),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: _brand,
-                  foregroundColor: Colors.black87,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(16),
-                  ),
-                ),
-              ),
-            ),
-          ],
-        ],
-      ),
-    );
-  }
-
-  Widget _searchRow(Color surface) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+      padding: const EdgeInsets.fromLTRB(16, 10, 16, 6),
       child: Row(
         children: [
           Expanded(
             child: TextField(
               controller: _searchCtrl,
-              onChanged: (v) => setState(() => _query = v.trim()),
+              onChanged: (value) => setState(() => _query = value.trim()),
               textInputAction: TextInputAction.search,
               decoration: InputDecoration(
                 hintText: "Search opportunities",
@@ -508,6 +381,7 @@ class _HomeFeedState extends State<HomeFeed> {
                 suffixIcon: _query.isEmpty
                     ? null
                     : IconButton(
+                        tooltip: "Clear search",
                         icon: const Icon(Icons.close_rounded),
                         onPressed: () => setState(() {
                           _searchCtrl.clear();
@@ -515,7 +389,7 @@ class _HomeFeedState extends State<HomeFeed> {
                         }),
                       ),
                 filled: true,
-                fillColor: surface,
+                fillColor: colors.surfaceContainerHighest,
                 contentPadding: const EdgeInsets.symmetric(vertical: 0),
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(14),
@@ -524,22 +398,22 @@ class _HomeFeedState extends State<HomeFeed> {
               ),
             ),
           ),
-          const SizedBox(width: 10),
+          const SizedBox(width: 8),
           Badge(
             isLabelVisible: _hasFilters,
             backgroundColor: _brandDark,
             child: IconButton.filled(
+              tooltip: "Filters and layout",
+              onPressed: _openFilterSheet,
+              icon: const Icon(Icons.tune_rounded),
               style: IconButton.styleFrom(
+                fixedSize: const Size(48, 48),
                 backgroundColor: _brand,
                 foregroundColor: Colors.black87,
-                fixedSize: const Size(48, 48),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(14),
                 ),
               ),
-              tooltip: "Filters & sort",
-              icon: const Icon(Icons.tune_rounded),
-              onPressed: _openFilterSheet,
             ),
           ),
         ],
@@ -548,27 +422,51 @@ class _HomeFeedState extends State<HomeFeed> {
   }
 
   Widget _categoryChips() {
+    final scale = MediaQuery.textScalerOf(context).scale(14) / 14;
+    final height = 48.0 + (scale > 1 ? (scale - 1) * 20 : 0);
+
+    Widget chip(String label, IconData icon, bool selected, VoidCallback tap) {
+      return Padding(
+        padding: const EdgeInsets.only(right: 8),
+        child: Center(
+          child: FilterChip(
+            avatar: Icon(
+              icon,
+              size: 16,
+              color: selected ? Colors.black87 : _brandDark,
+            ),
+            label: Text(label),
+            selected: selected,
+            showCheckmark: false,
+            selectedColor: _brand,
+            labelStyle: TextStyle(
+              fontWeight: FontWeight.w600,
+              color: selected ? Colors.black87 : null,
+            ),
+            shape: const StadiumBorder(),
+            onSelected: (_) => tap(),
+          ),
+        ),
+      );
+    }
+
     return SizedBox(
-      height: 44,
+      height: height,
       child: ListView(
         scrollDirection: Axis.horizontal,
         padding: const EdgeInsets.symmetric(horizontal: 16),
         children: [
-          _chip(
-            label: "All",
-            icon: Icons.apps_rounded,
-            selected: _categories.isEmpty,
-            onTap: () => setState(_categories.clear),
-          ),
-          for (final e in kCategories.entries)
-            _chip(
-              label: e.value.$1,
-              icon: e.value.$2,
-              selected: _categories.contains(e.key),
-              onTap: () => setState(() {
-                _categories.contains(e.key)
-                    ? _categories.remove(e.key)
-                    : _categories.add(e.key);
+          chip("All", Icons.apps_rounded, _categories.isEmpty,
+              () => setState(_categories.clear)),
+          for (final entry in kCategories.entries)
+            chip(
+              entry.value.$1,
+              entry.value.$2,
+              _categories.contains(entry.key),
+              () => setState(() {
+                if (!_categories.remove(entry.key)) {
+                  _categories.add(entry.key);
+                }
               }),
             ),
         ],
@@ -576,144 +474,151 @@ class _HomeFeedState extends State<HomeFeed> {
     );
   }
 
-  Widget _feedHeader(int count, bool dark) {
-    final muted = dark ? Colors.white60 : Colors.black54;
+  Widget _feedHeader(int? count) {
+    final colors = Theme.of(context).colorScheme;
+    final countText = count == null
+        ? "Opportunities"
+        : "$count ${count == 1 ? 'opportunity' : 'opportunities'}";
+
     return Row(
       children: [
         Expanded(
           child: Text(
-            "$count opportunit${count == 1 ? 'y' : 'ies'} · ${kSortLabels[_sort]}",
-            style: TextStyle(fontSize: 13, color: muted),
+            countText,
+            style: TextStyle(fontSize: 13, color: colors.onSurfaceVariant),
           ),
         ),
-        SegmentedButton<FeedLayout>(
-          showSelectedIcon: false,
-          style: SegmentedButton.styleFrom(
-            visualDensity: VisualDensity.compact,
-            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-            selectedBackgroundColor: _brand.withValues(alpha: 0.35),
-          ),
-          segments: const [
-            ButtonSegment(
-              value: FeedLayout.grid,
-              icon: Icon(Icons.grid_view_rounded, size: 18),
-              tooltip: "Two per row",
+        if (widget.isOrganizer)
+          IconButton(
+            tooltip: "Add extracurricular",
+            icon: const Icon(Icons.add_rounded),
+            onPressed: () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const AddActivityScreen()),
             ),
-            ButtonSegment(
-              value: FeedLayout.centered,
-              icon: Icon(Icons.view_agenda_rounded, size: 18),
-              tooltip: "One per row",
+          ),
+        PopupMenuButton<WidgetBuilder>(
+          tooltip: "Resources",
+          icon: const Icon(Icons.menu_book_outlined, size: 21),
+          onSelected: (page) {
+            Navigator.push(context, MaterialPageRoute(builder: page));
+          },
+          itemBuilder: (_) => [
+            PopupMenuItem<WidgetBuilder>(
+              key: const ValueKey('home-schools-shortcut'),
+              value: (_) => const SchoolScreen(),
+              child: const Text("Best Schools in Georgia"),
+            ),
+            PopupMenuItem<WidgetBuilder>(
+              value: (_) => const RoadmapScreen(),
+              child: const Text("Roadmaps"),
+            ),
+            PopupMenuItem<WidgetBuilder>(
+              key: const ValueKey('home-calendar-shortcut'),
+              value: (_) => CalendarScreen(isOrganizer: widget.isOrganizer),
+              child: const Text("Academic Calendar"),
             ),
           ],
-          selected: {_layout},
-          onSelectionChanged: (s) => setState(() => _layout = s.first),
+        ),
+        PopupMenuButton<SortBy>(
+          tooltip: "Sort opportunities",
+          initialValue: _sort,
+          onSelected: (value) => setState(() => _sort = value),
+          itemBuilder: (_) => [
+            for (final value in SortBy.values)
+              PopupMenuItem(value: value, child: Text(kSortLabels[value]!)),
+          ],
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 12),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(kSortLabels[_sort]!, style: const TextStyle(fontSize: 13)),
+                const Icon(Icons.expand_more, size: 17),
+              ],
+            ),
+          ),
         ),
       ],
     );
   }
 
-  // Layout 1: two activities side by side.
-  Widget _gridSliver(List<Map<String, dynamic>> items) {
-    return SliverLayoutBuilder(
-      builder: (context, constraints) {
-        final scale = MediaQuery.textScalerOf(context).scale(14) / 14;
-        final columns =
-            (constraints.crossAxisExtent / (scale > 1.3 ? 300 : 245))
-                .floor()
-                .clamp(1, 4)
-                .toInt();
-        final rows = <Widget>[];
-        for (var i = 0; i < items.length; i += columns) {
-          rows.add(
-            Padding(
-              padding: const EdgeInsets.only(bottom: 12),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  for (var j = 0; j < columns; j++) ...[
-                    if (j > 0) const SizedBox(width: 12),
-                    Expanded(
-                      child: i + j < items.length
-                          ? OpportunityCard(data: items[i + j], big: false)
-                          : const SizedBox.shrink(),
-                    ),
-                  ],
-                ],
-              ),
-            ),
-          );
-        }
-        return SliverPadding(
-          padding: const EdgeInsets.fromLTRB(16, 4, 16, 24),
-          sliver: SliverList(delegate: SliverChildListDelegate(rows)),
-        );
-      },
-    );
-  }
-
-  Widget _centeredSliver(List<Map<String, dynamic>> items) {
+  Widget _opportunitiesSliver(List<Map<String, dynamic>> items) {
     return SliverPadding(
       padding: const EdgeInsets.fromLTRB(16, 4, 16, 24),
-      sliver: SliverList.separated(
-        itemCount: items.length,
-        separatorBuilder: (_, __) => const SizedBox(height: 14),
-        itemBuilder: (_, i) => Center(
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 520),
-            child: OpportunityCard(data: items[i], big: true),
-          ),
-        ),
-      ),
-    );
-  }
+      sliver: SliverLayoutBuilder(
+        builder: (context, constraints) {
+          final singleColumn = _layout == FeedLayout.centered;
+          final scale = MediaQuery.textScalerOf(context).scale(14) / 14;
+          final columnWidth = scale > 1.3 ? 340 : 280;
+          final columns = singleColumn
+              ? 1
+              : (constraints.crossAxisExtent / columnWidth)
+                  .floor()
+                  .clamp(1, 4)
+                  .toInt();
+          final rowCount = (items.length + columns - 1) ~/ columns;
 
-  Widget _chip({
-    required String label,
-    required IconData icon,
-    required bool selected,
-    required VoidCallback onTap,
-  }) {
-    return Padding(
-      padding: const EdgeInsets.only(right: 8),
-      child: FilterChip(
-        avatar: Icon(
-          icon,
-          size: 18,
-          color: selected ? Colors.black87 : _brandDark,
-        ),
-        label: Text(label),
-        selected: selected,
-        showCheckmark: false,
-        onSelected: (_) => onTap(),
-        selectedColor: _brand,
-        labelStyle: TextStyle(
-          fontWeight: FontWeight.w600,
-          color: selected ? Colors.black87 : null,
-        ),
-        shape: StadiumBorder(
-          side: BorderSide(color: selected ? _brand : Colors.black12),
-        ),
+          return SliverList(
+            delegate: SliverChildBuilderDelegate(
+              (context, row) {
+                if (singleColumn) {
+                  return Padding(
+                    padding: const EdgeInsets.only(bottom: 10),
+                    child: Center(
+                      child: ConstrainedBox(
+                        constraints: const BoxConstraints(maxWidth: 520),
+                        child: OpportunityCard(data: items[row], big: true),
+                      ),
+                    ),
+                  );
+                }
+
+                return Padding(
+                  padding: const EdgeInsets.only(bottom: 10),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      for (int col = 0; col < columns; col++) ...[
+                        if (col > 0) const SizedBox(width: 12),
+                        Expanded(
+                          child: row * columns + col < items.length
+                              ? OpportunityCard(
+                                  data: items[row * columns + col],
+                                  big: false,
+                                )
+                              : const SizedBox.shrink(),
+                        ),
+                      ],
+                    ],
+                  ),
+                );
+              },
+              childCount: rowCount,
+            ),
+          );
+        },
       ),
     );
   }
 
   Widget _emptyState() {
+    final filtered = _hasFilters || _query.isNotEmpty;
+
     return Center(
       child: Padding(
-        padding: const EdgeInsets.all(32),
+        padding: const EdgeInsets.all(24),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(Icons.search_off_rounded, size: 56, color: _brandDark),
-            const SizedBox(height: 12),
+            const Icon(Icons.search_off_rounded, size: 40, color: _brandDark),
+            const SizedBox(height: 10),
             Text(
-              _hasFilters || _query.isNotEmpty
-                  ? "Nothing matches your filters"
-                  : "No opportunities yet",
-              style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
+              filtered ? "Nothing matches your filters" : "No opportunities yet",
+              textAlign: TextAlign.center,
+              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
             ),
-            const SizedBox(height: 12),
-            if (_hasFilters || _query.isNotEmpty)
+            if (filtered)
               TextButton(onPressed: _clearAll, child: const Text("Clear all")),
           ],
         ),
@@ -726,132 +631,112 @@ class _HomeFeedState extends State<HomeFeed> {
       context: context,
       isScrollControlled: true,
       showDragHandle: true,
-      builder: (ctx) => StatefulBuilder(
-        builder: (ctx, setSheet) {
-          void update(VoidCallback fn) {
-            setState(fn);
+      builder: (sheetContext) => StatefulBuilder(
+        builder: (context, setSheet) {
+          void update(VoidCallback change) {
+            setState(change);
             setSheet(() {});
           }
 
-          const h = TextStyle(fontWeight: FontWeight.w700);
+          const heading = TextStyle(fontWeight: FontWeight.w700);
 
           return SafeArea(
             child: SingleChildScrollView(
               padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
               child: Column(
-                mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   const Text(
                     "Filters",
                     style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800),
                   ),
-                  const SizedBox(height: 20),
-
-                  // Sort by
-                  const Text("Sort by", style: h),
-                  const SizedBox(height: 8),
+                  const SizedBox(height: 18),
+                  const Text("Layout", style: heading),
                   Wrap(
                     spacing: 8,
-                    runSpacing: 8,
                     children: [
-                      for (final s in SortBy.values)
+                      for (final layout in FeedLayout.values)
                         ChoiceChip(
-                          label: Text(kSortLabels[s]!),
-                          selected: _sort == s,
-                          showCheckmark: false,
-                          selectedColor: _brand,
-                          onSelected: (_) => update(() => _sort = s),
+                          label: Text(layout == FeedLayout.grid
+                              ? "Auto grid"
+                              : "Single column"),
+                          selected: _layout == layout,
+                          onSelected: (_) => update(() => _layout = layout),
                         ),
                     ],
                   ),
-                  const SizedBox(height: 20),
-
-                  // Olympiad subject
-                  const Text("Olympiad subject", style: h),
-                  const SizedBox(height: 8),
+                  const SizedBox(height: 16),
+                  const Text("Sort by", style: heading),
                   Wrap(
                     spacing: 8,
-                    runSpacing: 8,
                     children: [
-                      for (final s in const [
-                        "maths",
-                        "robotics",
-                        "physics",
-                        "chemistry",
-                        "biology",
-                        "informatics",
-                      ])
+                      for (final sort in SortBy.values)
+                        ChoiceChip(
+                          label: Text(kSortLabels[sort]!),
+                          selected: _sort == sort,
+                          onSelected: (_) => update(() => _sort = sort),
+                        ),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                  const Text("Olympiad subject", style: heading),
+                  Wrap(
+                    spacing: 8,
+                    children: [
+                     for (final subject in const [
+  "maths", "physics", "chemistry", "biology",
+  "robotics", "informatics", "programming", "astrophysics",
+  "linguistics", "english", "economics", "other",
+])
                         FilterChip(
-                          avatar: Icon(kSubjectIcons[s], size: 16),
-                          label: Text(_capitalize(s)),
-                          selected: _subjects.contains(s),
-                          showCheckmark: false,
-                          selectedColor: _brand,
-                          onSelected: (_) => update(() {
-                            _subjects.contains(s)
-                                ? _subjects.remove(s)
-                                : _subjects.add(s);
+                          avatar: Icon(kSubjectIcons[subject], size: 16),
+                          label: Text(_capitalize(subject)),
+                          selected: _subjects.contains(subject),
+                          onSelected: (selected) => update(() {
+                            if (selected) {
+                              _subjects.add(subject);
+                            } else {
+                              _subjects.remove(subject);
+                            }
                           }),
                         ),
                     ],
                   ),
-                  const SizedBox(height: 20),
-
-                  const Text("Cost", style: h),
+                  const SizedBox(height: 16),
+                  const Text("Cost", style: heading),
                   const SizedBox(height: 8),
                   SegmentedButton<CostFilter>(
                     segments: const [
                       ButtonSegment(value: CostFilter.any, label: Text("Any")),
-                      ButtonSegment(
-                        value: CostFilter.free,
-                        label: Text("Free"),
-                      ),
-                      ButtonSegment(
-                        value: CostFilter.paid,
-                        label: Text("Paid"),
-                      ),
+                      ButtonSegment(value: CostFilter.free, label: Text("Free")),
+                      ButtonSegment(value: CostFilter.paid, label: Text("Paid")),
                     ],
                     selected: {_cost},
-                    onSelectionChanged: (s) => update(() => _cost = s.first),
+                    onSelectionChanged: (values) =>
+                        update(() => _cost = values.first),
                   ),
-                  const SizedBox(height: 20),
-
+                  const SizedBox(height: 16),
                   Row(
                     children: [
-                      const Text("My age", style: h),
+                      const Text("My age", style: heading),
                       const Spacer(),
-                      Text(
-                        _myAge == null ? "Any age" : "$_myAge years",
-                        style: const TextStyle(fontWeight: FontWeight.w600),
-                      ),
+                      Text(_myAge == null ? "Any age" : "$_myAge years"),
                     ],
                   ),
-                  const SizedBox(height: 8),
-
-                  Wrap(
-                    spacing: 8,
-                    children: [
-                      ChoiceChip(
-                        label: const Text("Any age"),
-                        selected: _myAge == null,
-                        showCheckmark: false,
-                        selectedColor: _brand,
-                        onSelected: (_) => update(() => _myAge = null),
-                      ),
-                    ],
+                  ChoiceChip(
+                    label: const Text("Any age"),
+                    selected: _myAge == null,
+                    onSelected: (_) => update(() => _myAge = null),
                   ),
-
                   Slider(
                     value: (_myAge ?? 12).toDouble(),
                     min: 12,
                     max: 20,
                     divisions: 8,
-                    label: _myAge == null ? "Any age" : "$_myAge",
-                    activeColor: _brandDark,
-                    onChanged: (v) => update(() => _myAge = v.round()),
+                    label: _myAge?.toString() ?? "Any age",
+                    onChanged: (value) => update(() => _myAge = value.round()),
                   ),
-                  const SizedBox(height: 12),
+                  const SizedBox(height: 8),
                   Row(
                     children: [
                       TextButton(
@@ -863,10 +748,7 @@ class _HomeFeedState extends State<HomeFeed> {
                       ),
                       const Spacer(),
                       FilledButton(
-                        style: FilledButton.styleFrom(
-                          backgroundColor: _brandDark,
-                        ),
-                        onPressed: () => Navigator.pop(ctx),
+                        onPressed: () => Navigator.pop(sheetContext),
                         child: const Text("Show results"),
                       ),
                     ],
@@ -881,50 +763,54 @@ class _HomeFeedState extends State<HomeFeed> {
   }
 }
 
-// ---------- One compact item in the feed: logo + title + key tags ----------
 class OpportunityCard extends StatelessWidget {
   final Map<String, dynamic> data;
-  final bool big; // true in the centered layout
-  const OpportunityCard({super.key, required this.data, required this.big});
+  final bool big;
+
+  const OpportunityCard({
+    super.key,
+    required this.data,
+    required this.big,
+  });
 
   @override
   Widget build(BuildContext context) {
-    final dark = Theme.of(context).brightness == Brightness.dark;
-    final title = (data["title"] ?? "").toString();
-    final age = (data["ageRequirements"] ?? data["age"] ?? "").toString();
-    final cost = (data["cost"] ?? "").toString();
-    final image = (data["imageUrl"] ?? data["image"] ?? "").toString();
-    final section = (data[kCategoryField] ?? "").toString();
-    final cat = kCategories[section];
+    final colors = Theme.of(context).colorScheme;
+    final category = kCategories[_str(data, [kCategoryField])];
+    final title = _title(data);
+    final image = _str(data, ["imageUrl", "image"]);
+    final age = _str(data, ["ageRequirements", "age"]);
+    final cost = _str(data, ["cost"]);
     final subject = _subject(data);
     final duration = _duration(data);
+    final section = _str(data, [kCategoryField]);
+    final deadline = _deadline(data);
 
-    // Only the most important tags (max 3).
     final tags = <(IconData, String)>[
       if (section == "olympiads" && subject.isNotEmpty)
-        (
-          kSubjectIcons[subject.toLowerCase()] ?? Icons.school_rounded,
-          _capitalize(subject),
-        ),
+        (kSubjectIcons[subject] ?? Icons.school_outlined, _capitalize(subject)),
       if (section == "exchange" && duration.isNotEmpty)
         (Icons.schedule_rounded, duration),
       if (age.isNotEmpty) (Icons.person_outline_rounded, age),
       (
         Icons.payments_outlined,
-        cost.trim().isEmpty
-            ? "Cost not specified"
-            : (_isFree(cost) ? "Free" : cost),
+        cost.isEmpty ? "Cost not specified" : (_isFree(cost) ? "Free" : cost),
       ),
-    ].take(3).toList();
+    ];
 
-    final cardColor = dark ? const Color(0xff1e2228) : Colors.white;
+    Widget logoFallback() => Icon(
+      category?.$2 ?? Icons.school_outlined,
+      size: 25,
+      color: _brandDark,
+    );
 
     return Material(
-      color: cardColor,
-      borderRadius: BorderRadius.circular(18),
+      color: colors.surface,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(18),
+        side: BorderSide(color: colors.outlineVariant),
+      ),
       clipBehavior: Clip.antiAlias,
-      // No tint: keeps the logo background from turning grey.
-      surfaceTintColor: Colors.transparent,
       child: InkWell(
         onTap: () => Navigator.push(
           context,
@@ -932,90 +818,112 @@ class OpportunityCard extends StatelessWidget {
             builder: (_) => ActivityDetailsScreen(activity: data),
           ),
         ),
-        child: Ink(
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(18),
-            border: Border.all(
-              color: dark ? Colors.white10 : const Color(0xffe8ecf0),
-            ),
-          ),
-          child: Padding(
-            padding: EdgeInsets.all(big ? 14 : 10),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Logo
-                SizedBox(
-                  height: big ? 140 : 100,
-                  child: Container(
-                    width: double.infinity,
+        child: Padding(
+          padding: EdgeInsets.all(big ? 16 : 14),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Container(
+                    width: 48,
+                    height: 48,
+                    padding: const EdgeInsets.all(5),
                     decoration: BoxDecoration(
                       color: Colors.white,
-                      borderRadius: BorderRadius.circular(12),
+                      borderRadius: BorderRadius.circular(10),
                     ),
-                    padding: const EdgeInsets.all(8),
-                    child: image.isNotEmpty
-                        ? Image.network(
+                    child: image.isEmpty
+                        ? logoFallback()
+                        : Image.network(
                             image,
                             fit: BoxFit.contain,
-                            errorBuilder: (_, __, ___) => _placeholder(cat?.$2),
-                          )
-                        : _placeholder(cat?.$2),
+                            errorBuilder: (_, __, ___) => logoFallback(),
+                          ),
                   ),
-                ),
-                SizedBox(height: big ? 10 : 8),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        if (category != null)
+                          Text(
+                            category.$1,
+                            style: TextStyle(
+                              fontSize: 11,
+                              color: colors.onSurfaceVariant,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        Text(
+                          title.isEmpty ? "Untitled opportunity" : title,
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w700,
+                            height: 1.25,
+                            color: colors.onSurface,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 4),
+                  Icon(
+                    Icons.chevron_right_rounded,
+                    size: 18,
+                    color: colors.onSurfaceVariant,
+                  ),
+                ],
+              ),
+              if (deadline != null) ...[
+                const SizedBox(height: 10),
                 Text(
-                  title,
-                  maxLines: null,
+                  "Deadline · ${MaterialLocalizations.of(context).formatMediumDate(deadline)}",
                   style: TextStyle(
-                    fontSize: big ? 15 : 13,
-                    fontWeight: FontWeight.w800,
-                    height: 1.2,
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                    color: colors.onSurface,
                   ),
-                ),
-                SizedBox(height: big ? 8 : 6),
-                Wrap(
-                  spacing: 4,
-                  runSpacing: 4,
-                  clipBehavior: Clip.hardEdge,
-                  children: [for (final t in tags) _tag(t.$1, t.$2, big)],
                 ),
               ],
-            ),
+              const SizedBox(height: 10),
+              Wrap(
+                spacing: 6,
+                runSpacing: 6,
+                children: [
+                  for (final tag in tags)
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 4,
+                      ),
+                      decoration: BoxDecoration(
+                        color: _brand.withValues(alpha: 0.16),
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(tag.$1, size: 13, color: _brandDark),
+                          const SizedBox(width: 4),
+                          Flexible(
+                            child: Text(
+                              tag.$2,
+                              style: const TextStyle(
+                                fontSize: 11.5,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                ],
+              ),
+            ],
           ),
         ),
       ),
     );
   }
-
-  Widget _placeholder(IconData? icon) => Center(
-        child: Icon(icon ?? Icons.star_rounded,
-            size: big ? 44 : 34, color: _brand),
-      );
-
-  Widget _tag(IconData icon, String text, bool big) => Container(
-        constraints: const BoxConstraints(maxWidth: 240),
-        padding: EdgeInsets.symmetric(horizontal: big ? 8 : 6, vertical: 3),
-        decoration: BoxDecoration(
-          color: _brand.withValues(alpha: 0.18),
-          borderRadius: BorderRadius.circular(20),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(icon, size: big ? 13 : 11, color: _brandDark),
-            const SizedBox(width: 3),
-            Flexible(
-              child: Text(
-                text,
-                softWrap: true,
-                style: TextStyle(
-                  fontSize: big ? 11.5 : 10.5,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ),
-          ],
-        ),
-      );
 }
