@@ -1023,4 +1023,86 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get interests => 'Interests';
+
+  @override
+  String get usageStats => 'Usage stats';
+
+  @override
+  String get loadStatsFailed =>
+      'Couldn\'t load the stats. Check your connection and try again.';
+
+  @override
+  String get last7Days => 'Last 7 days';
+
+  @override
+  String get last30Days => 'Last 30 days';
+
+  @override
+  String get statViews => 'Views';
+
+  @override
+  String get statSaves => 'Saves';
+
+  @override
+  String get statShares => 'Shares';
+
+  @override
+  String get topOpportunities => 'Top opportunities';
+
+  @override
+  String get noStatsYet => 'No activity in this period yet.';
+
+  @override
+  String get statsUpdatedDaily =>
+      'Each student counts once per opportunity per day. Stats update once a day, so today\'s activity appears tomorrow.';
+
+  @override
+  String get reviewQueue => 'Review queue';
+
+  @override
+  String get noPendingOpportunities =>
+      'Nothing to review. New drafts from your sources arrive every morning.';
+
+  @override
+  String get approve => 'Approve';
+
+  @override
+  String get reject => 'Reject';
+
+  @override
+  String get reviewFailed =>
+      'Couldn\'t update this draft. Check your connection and try again.';
+
+  @override
+  String get needTitleCategory =>
+      'Add a title and a category before approving.';
+
+  @override
+  String get titleField => 'Title';
+
+  @override
+  String fromSource(String name) {
+    return 'From $name';
+  }
+
+  @override
+  String get opportunitySources => 'Sources';
+
+  @override
+  String get addSource => 'Add source';
+
+  @override
+  String get feedUrl => 'Feed URL';
+
+  @override
+  String get invalidFeedUrl => 'Enter a full feed link starting with https://';
+
+  @override
+  String get sourcesHelp =>
+      'Every morning OpportuNet reads these feeds (RSS, or a WordPress site\'s /feed), drafts new opportunities with AI and puts them in the review queue. Nothing is published without your approval.';
+
+  @override
+  String sourceError(String error) {
+    return 'Last check failed: $error';
+  }
 }

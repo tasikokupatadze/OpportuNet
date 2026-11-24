@@ -1975,6 +1975,150 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Interests'**
   String get interests;
+
+  /// No description provided for @usageStats.
+  ///
+  /// In en, this message translates to:
+  /// **'Usage stats'**
+  String get usageStats;
+
+  /// No description provided for @loadStatsFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t load the stats. Check your connection and try again.'**
+  String get loadStatsFailed;
+
+  /// No description provided for @last7Days.
+  ///
+  /// In en, this message translates to:
+  /// **'Last 7 days'**
+  String get last7Days;
+
+  /// No description provided for @last30Days.
+  ///
+  /// In en, this message translates to:
+  /// **'Last 30 days'**
+  String get last30Days;
+
+  /// No description provided for @statViews.
+  ///
+  /// In en, this message translates to:
+  /// **'Views'**
+  String get statViews;
+
+  /// No description provided for @statSaves.
+  ///
+  /// In en, this message translates to:
+  /// **'Saves'**
+  String get statSaves;
+
+  /// No description provided for @statShares.
+  ///
+  /// In en, this message translates to:
+  /// **'Shares'**
+  String get statShares;
+
+  /// No description provided for @topOpportunities.
+  ///
+  /// In en, this message translates to:
+  /// **'Top opportunities'**
+  String get topOpportunities;
+
+  /// No description provided for @noStatsYet.
+  ///
+  /// In en, this message translates to:
+  /// **'No activity in this period yet.'**
+  String get noStatsYet;
+
+  /// No description provided for @statsUpdatedDaily.
+  ///
+  /// In en, this message translates to:
+  /// **'Each student counts once per opportunity per day. Stats update once a day, so today\'s activity appears tomorrow.'**
+  String get statsUpdatedDaily;
+
+  /// No description provided for @reviewQueue.
+  ///
+  /// In en, this message translates to:
+  /// **'Review queue'**
+  String get reviewQueue;
+
+  /// No description provided for @noPendingOpportunities.
+  ///
+  /// In en, this message translates to:
+  /// **'Nothing to review. New drafts from your sources arrive every morning.'**
+  String get noPendingOpportunities;
+
+  /// No description provided for @approve.
+  ///
+  /// In en, this message translates to:
+  /// **'Approve'**
+  String get approve;
+
+  /// No description provided for @reject.
+  ///
+  /// In en, this message translates to:
+  /// **'Reject'**
+  String get reject;
+
+  /// No description provided for @reviewFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t update this draft. Check your connection and try again.'**
+  String get reviewFailed;
+
+  /// No description provided for @needTitleCategory.
+  ///
+  /// In en, this message translates to:
+  /// **'Add a title and a category before approving.'**
+  String get needTitleCategory;
+
+  /// No description provided for @titleField.
+  ///
+  /// In en, this message translates to:
+  /// **'Title'**
+  String get titleField;
+
+  /// No description provided for @fromSource.
+  ///
+  /// In en, this message translates to:
+  /// **'From {name}'**
+  String fromSource(String name);
+
+  /// No description provided for @opportunitySources.
+  ///
+  /// In en, this message translates to:
+  /// **'Sources'**
+  String get opportunitySources;
+
+  /// No description provided for @addSource.
+  ///
+  /// In en, this message translates to:
+  /// **'Add source'**
+  String get addSource;
+
+  /// No description provided for @feedUrl.
+  ///
+  /// In en, this message translates to:
+  /// **'Feed URL'**
+  String get feedUrl;
+
+  /// No description provided for @invalidFeedUrl.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter a full feed link starting with https://'**
+  String get invalidFeedUrl;
+
+  /// No description provided for @sourcesHelp.
+  ///
+  /// In en, this message translates to:
+  /// **'Every morning OpportuNet reads these feeds (RSS, or a WordPress site\'s /feed), drafts new opportunities with AI and puts them in the review queue. Nothing is published without your approval.'**
+  String get sourcesHelp;
+
+  /// No description provided for @sourceError.
+  ///
+  /// In en, this message translates to:
+  /// **'Last check failed: {error}'**
+  String sourceError(String error);
 }
 
 class _AppLocalizationsDelegate

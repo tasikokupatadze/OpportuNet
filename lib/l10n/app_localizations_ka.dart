@@ -1022,4 +1022,87 @@ class AppLocalizationsKa extends AppLocalizations {
 
   @override
   String get interests => 'ინტერესები';
+
+  @override
+  String get usageStats => 'სტატისტიკა';
+
+  @override
+  String get loadStatsFailed =>
+      'სტატისტიკა ვერ ჩაიტვირთა. შეამოწმეთ ინტერნეტი და სცადეთ თავიდან.';
+
+  @override
+  String get last7Days => 'ბოლო 7 დღე';
+
+  @override
+  String get last30Days => 'ბოლო 30 დღე';
+
+  @override
+  String get statViews => 'ნახვები';
+
+  @override
+  String get statSaves => 'შენახვები';
+
+  @override
+  String get statShares => 'გაზიარებები';
+
+  @override
+  String get topOpportunities => 'ყველაზე პოპულარული';
+
+  @override
+  String get noStatsYet => 'ამ პერიოდში აქტივობა ჯერ არ ყოფილა.';
+
+  @override
+  String get statsUpdatedDaily =>
+      'თითოეული მოსწავლე ერთ შესაძლებლობაზე დღეში ერთხელ ითვლება. სტატისტიკა დღეში ერთხელ ახლდება, ამიტომ დღევანდელი აქტივობა ხვალ გამოჩნდება.';
+
+  @override
+  String get reviewQueue => 'განსახილველი';
+
+  @override
+  String get noPendingOpportunities =>
+      'განსახილველი არაფერია. ახალი მონახაზები წყაროებიდან ყოველ დილით შემოდის.';
+
+  @override
+  String get approve => 'დამტკიცება';
+
+  @override
+  String get reject => 'უარყოფა';
+
+  @override
+  String get reviewFailed =>
+      'მონახაზი ვერ განახლდა. შეამოწმეთ ინტერნეტი და სცადეთ თავიდან.';
+
+  @override
+  String get needTitleCategory =>
+      'დამტკიცებამდე მიუთითეთ სათაური და კატეგორია.';
+
+  @override
+  String get titleField => 'სათაური';
+
+  @override
+  String fromSource(String name) {
+    return 'წყარო: $name';
+  }
+
+  @override
+  String get opportunitySources => 'წყაროები';
+
+  @override
+  String get addSource => 'წყაროს დამატება';
+
+  @override
+  String get feedUrl => 'არხის ბმული';
+
+  @override
+  String get invalidFeedUrl =>
+      'შეიყვანეთ არხის სრული ბმული, რომელიც https://-ით იწყება';
+
+  @override
+  String get sourcesHelp =>
+      'ყოველ დილით OpportuNet ამ არხებს კითხულობს (RSS ან WordPress-ის საიტის /feed), ახალ შესაძლებლობებს AI-ით ამზადებს და განსახილველ სიაში ამატებს. თქვენი დამტკიცების გარეშე არაფერი გამოქვეყნდება.';
+
+  @override
+  String sourceError(String error) {
+    return 'ბოლო შემოწმება ვერ მოხერხდა: $error';
+  }
 }

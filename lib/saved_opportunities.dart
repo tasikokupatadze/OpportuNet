@@ -5,6 +5,7 @@ import 'package:material_ui/material_ui.dart';
 import 'app_ui.dart';
 import 'home_feed.dart' show kCategoryField;
 import 'notification_service.dart';
+import 'opportunity_stats.dart';
 
 /// Added to each opportunity map by the Home feed: its Firestore document id.
 const String kIdField = "_id";
@@ -64,6 +65,7 @@ Future<void> toggleSaved(
         'lang': lang,
         'savedAt': FieldValue.serverTimestamp(),
       });
+      logOpportunityEvent(data, StatEvent.save);
     } else {
       await doc.delete();
     }

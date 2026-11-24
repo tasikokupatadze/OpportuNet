@@ -327,5 +327,35 @@
   "turnOn": "Turn on",
   "sortForYou": "For you",
   "forYouEmptyProfile": "Add your age and interests to your profile to see the opportunities that fit you first.",
-  "interests": "Interests"
+  "interests": "Interests",
+  "usageStats": "Usage stats",
+  "loadStatsFailed": "Couldn't load the stats. Check your connection and try again.",
+  "last7Days": "Last 7 days",
+  "last30Days": "Last 30 days",
+  "statViews": "Views",
+  "statSaves": "Saves",
+  "statShares": "Shares",
+  "topOpportunities": "Top opportunities",
+  "noStatsYet": "No activity in this period yet.",
+  "statsUpdatedDaily": "Each student counts once per opportunity per day. Stats update once a day, so today's activity appears tomorrow.",
+  "reviewQueue": "Review queue",
+  "noPendingOpportunities": "Nothing to review. New drafts from your sources arrive every morning.",
+  "approve": "Approve",
+  "reject": "Reject",
+  "reviewFailed": "Couldn't update this draft. Check your connection and try again.",
+  "needTitleCategory": "Add a title and a category before approving.",
+  "titleField": "Title",
+  "fromSource": "From {name}",
+  "@fromSource": {
+    "placeholders": {"name": {"type": "String"}}
+  },
+  "opportunitySources": "Sources",
+  "addSource": "Add source",
+  "feedUrl": "Feed URL",
+  "invalidFeedUrl": "Enter a full feed link starting with https://",
+  "sourcesHelp": "Every morning OpportuNet reads these feeds (RSS, or a WordPress site's /feed), drafts new opportunities with AI and puts them in the review queue. Nothing is published without your approval.",
+  "sourceError": "Last check failed: {error}",
+  "@sourceError": {
+    "placeholders": {"error": {"type": "String"}}
+  }
 }

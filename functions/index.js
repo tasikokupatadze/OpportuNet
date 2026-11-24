@@ -6,6 +6,9 @@ const axios = require("axios");
 const cors = require("cors")({origin: true});
 const {defineSecret} = require("firebase-functions/params");
 
+const {draftMessages} = require("./opportunity-prompt");
+const {tbilisiDay} = require("./stats-logic");
+
 const GROQ_API_KEY = defineSecret("GROQ_API_KEY");
 
 admin.initializeApp();
@@ -76,12 +79,18 @@ exports.callAI = onRequest(
         logger.warn("callAI without token");
       }
 
-      const messages = req.body && req.body.messages;
+      // "Fill with AI": the app sends only the post; the prompt lives here
+      // so the daily collector uses the same one.
+      const draftPost = req.body && req.body.draftPost;
+      const isDraft = typeof draftPost === "string";
+      const messages = isDraft ?
+        draftMessages(draftPost, tbilisiDay(new Date())) :
+        req.body && req.body.messages;
       if (!validMessages(messages)) {
         return res.status(400).json({error: "Invalid messages"});
       }
       const t = Number(req.body.temperature);
-      const temperature = t >= 0 && t <= 1.5 ? t : 0.7;
+      const temperature = isDraft ? 0.1 : t >= 0 && t <= 1.5 ? t : 0.7;
 
       try {
         const key = GROQ_API_KEY.value();
@@ -114,3 +123,9 @@ exports.callAI = onRequest(
         res.status(502).json({error: "AI request failed"});
       }
     });
+
+exports.aggregateOpportunityStats =
+    require("./stats").aggregateOpportunityStats;
+
+exports.collectOpportunities =
+    require("./collect").collectOpportunitiesJob(GROQ_API_KEY);

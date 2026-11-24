@@ -1,4 +1,5 @@
 import 'app_ui.dart';
+import 'opportunity_stats.dart';
 import 'saved_opportunities.dart';
 
 import 'package:material_ui/material_ui.dart';
@@ -19,6 +20,7 @@ class ActivityDetailsScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    logOpportunityEvent(activity, StatEvent.view);
     final title = activity["title"] ?? "";
 
     final description = activity["description"] ?? "";

@@ -7,6 +7,8 @@ import 'package:material_ui/material_ui.dart';
 import 'activitydetails.dart';
 import 'app_ui.dart';
 import 'extracurriculars.dart';
+import 'opportunity_stats.dart';
+import 'pending_opportunities.dart';
 import 'roadmaps.dart';
 import 'saved_opportunities.dart';
 import 'schools.dart';
@@ -746,6 +748,26 @@ class _HomeFeedState extends State<HomeFeed> {
             style: TextStyle(fontSize: 13, color: colors.onSurfaceVariant),
           ),
         ),
+        if (widget.isOrganizer)
+          IconButton(
+            tooltip: context.l10n.reviewQueue,
+            icon: const Icon(Icons.fact_check_outlined),
+            onPressed: () => Navigator.push(
+              context,
+              MaterialPageRoute(
+                  builder: (_) => const PendingOpportunitiesScreen()),
+            ),
+          ),
+        if (widget.isOrganizer)
+          IconButton(
+            tooltip: context.l10n.usageStats,
+            icon: const Icon(Icons.insights_rounded),
+            onPressed: () => Navigator.push(
+              context,
+              MaterialPageRoute(
+                  builder: (_) => const OpportunityStatsScreen()),
+            ),
+          ),
         if (widget.isOrganizer)
           IconButton(
             tooltip: context.l10n.addOpportunity,
