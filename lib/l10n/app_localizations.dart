@@ -1945,6 +1945,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Couldn\'t open this opportunity. Check your connection and try again.'**
   String get opportunityOpenFailed;
+
+  /// No description provided for @savedAlertsOff.
+  ///
+  /// In en, this message translates to:
+  /// **'Saved. Deadline reminders need alerts turned on for this device.'**
+  String get savedAlertsOff;
+
+  /// No description provided for @turnOn.
+  ///
+  /// In en, this message translates to:
+  /// **'Turn on'**
+  String get turnOn;
 }
 
 class _AppLocalizationsDelegate

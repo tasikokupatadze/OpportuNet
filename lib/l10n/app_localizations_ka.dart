@@ -1005,4 +1005,11 @@ class AppLocalizationsKa extends AppLocalizations {
   @override
   String get opportunityOpenFailed =>
       'შესაძლებლობა ვერ გაიხსნა. შეამოწმეთ ინტერნეტი და სცადეთ თავიდან.';
+
+  @override
+  String get savedAlertsOff =>
+      'შენახულია. ვადის შეხსენებების მისაღებად ამ მოწყობილობაზე შეტყობინებები უნდა ჩართოთ.';
+
+  @override
+  String get turnOn => 'ჩართვა';
 }

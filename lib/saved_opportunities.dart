@@ -4,6 +4,7 @@ import 'package:material_ui/material_ui.dart';
 
 import 'app_ui.dart';
 import 'home_feed.dart' show kCategoryField;
+import 'notification_service.dart';
 
 /// Added to each opportunity map by the Home feed: its Firestore document id.
 const String kIdField = "_id";
@@ -67,12 +68,32 @@ Future<void> toggleSaved(
       await doc.delete();
     }
     messenger.hideCurrentSnackBar();
+    // Reminders go to this account's alert devices, so without alerts on
+    // this device the student may never see one.
+    final alerts = NotificationService.instance;
+    final needsAlerts = save && hasDeadline && !alerts.enabled;
     messenger.showSnackBar(SnackBar(
       content: Text(!save
           ? l10n.removedFromSavedOpportunities
-          : hasDeadline
-              ? l10n.savedWithReminder
-              : l10n.savedConfirm),
+          : needsAlerts
+              ? l10n.savedAlertsOff
+              : hasDeadline
+                  ? l10n.savedWithReminder
+                  : l10n.savedConfirm),
+      action: needsAlerts
+          ? SnackBarAction(
+              label: l10n.turnOn,
+              onPressed: () async {
+                await alerts.enable();
+                final error = alerts.error;
+                messenger.showSnackBar(SnackBar(
+                  content: Text(alerts.enabled
+                      ? l10n.savedWithReminder
+                      : error ?? l10n.savedAlertsOff),
+                ));
+              },
+            )
+          : null,
     ));
   } catch (_) {
     messenger.showSnackBar(SnackBar(content: Text(l10n.saveFailed)));

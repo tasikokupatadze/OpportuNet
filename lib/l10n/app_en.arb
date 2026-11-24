@@ -322,5 +322,7 @@
   "savedWithReminder": "Saved. You'll get a reminder 7 days and 1 day before the deadline.",
   "saveFailed": "Couldn't update your saved list. Try again.",
   "opportunityUnavailable": "This opportunity is no longer available.",
-  "opportunityOpenFailed": "Couldn't open this opportunity. Check your connection and try again."
+  "opportunityOpenFailed": "Couldn't open this opportunity. Check your connection and try again.",
+  "savedAlertsOff": "Saved. Deadline reminders need alerts turned on for this device.",
+  "turnOn": "Turn on"
 }

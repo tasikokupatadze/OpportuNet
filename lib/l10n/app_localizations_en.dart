@@ -1006,4 +1006,11 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get opportunityOpenFailed =>
       'Couldn\'t open this opportunity. Check your connection and try again.';
+
+  @override
+  String get savedAlertsOff =>
+      'Saved. Deadline reminders need alerts turned on for this device.';
+
+  @override
+  String get turnOn => 'Turn on';
 }
