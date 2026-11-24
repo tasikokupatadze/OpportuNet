@@ -104,6 +104,8 @@ class _HomeScreenState extends State<HomeScreen> {
   final TextEditingController _namePrflctrl = TextEditingController();
   final TextEditingController _surnamePrflctrl = TextEditingController();
   final TextEditingController _agePrflctrl = TextEditingController();
+  // Subject keys (kFilterSubjects), used by "For you" on Home and Ask AI.
+  Set<String> _interests = {};
   late String uid;
   final ScrollController scrollctrl = ScrollController();
 
@@ -165,6 +167,10 @@ class _HomeScreenState extends State<HomeScreen> {
         _surnamePrflctrl.text = data['surname'] ?? '';
         _agePrflctrl.text = (data['age'] ?? '').toString();
         _abtMePrflctrl.text = data['aboutMe'] ?? '';
+        final interests = data['interests'];
+        _interests = interests is List
+            ? interests.whereType<String>().toSet()
+            : <String>{};
         _profileImagePath = data['profileImage'] ?? '';
         _isOrganizer = (data['role'] ?? 'user') == 'organizer';
       });
@@ -191,6 +197,10 @@ class _HomeScreenState extends State<HomeScreen> {
         'surname': oldSurname,
         'age': _agePrflctrl.text.trim(),
         'aboutMe': _abtMePrflctrl.text.trim(),
+        'interests': [
+          for (final s in kFilterSubjects)
+            if (_interests.contains(s)) s,
+        ],
         'profileImage': _profileImagePath ?? '',
       }, SetOptions(merge: true));
 
@@ -359,6 +369,7 @@ class _HomeScreenState extends State<HomeScreen> {
       _agePrflctrl.text,
       _abtMePrflctrl.text,
     ];
+    final interestsBefore = {..._interests};
 
     final saved = await showModalBottomSheet<bool>(
       context: context,
@@ -419,7 +430,29 @@ class _HomeScreenState extends State<HomeScreen> {
                     field(_abtMePrflctrl, context.l10n.aboutMe,
                         context.l10n.aboutMeHint,
                         maxLines: 4),
-                    const SizedBox(height: 4),
+                    Text(context.l10n.interests,
+                        style: const TextStyle(fontWeight: FontWeight.w700)),
+                    const SizedBox(height: 8),
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 4,
+                      children: [
+                        for (final subject in kFilterSubjects)
+                          FilterChip(
+                            avatar: Icon(kSubjectIcons[subject], size: 16),
+                            label: Text(subjectLabel(context, subject)),
+                            selected: _interests.contains(subject),
+                            onSelected: (selected) => setSheet(() {
+                              if (selected) {
+                                _interests.add(subject);
+                              } else {
+                                _interests.remove(subject);
+                              }
+                            }),
+                          ),
+                      ],
+                    ),
+                    const SizedBox(height: 16),
                     FilledButton(
                       onPressed: saving
                           ? null
@@ -455,6 +488,7 @@ class _HomeScreenState extends State<HomeScreen> {
       _surnamePrflctrl.text = before[1];
       _agePrflctrl.text = before[2];
       _abtMePrflctrl.text = before[3];
+      _interests = interestsBefore;
     }
     if (mounted) setState(() {});
   }

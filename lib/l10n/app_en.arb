@@ -324,5 +324,8 @@
   "opportunityUnavailable": "This opportunity is no longer available.",
   "opportunityOpenFailed": "Couldn't open this opportunity. Check your connection and try again.",
   "savedAlertsOff": "Saved. Deadline reminders need alerts turned on for this device.",
-  "turnOn": "Turn on"
+  "turnOn": "Turn on",
+  "sortForYou": "For you",
+  "forYouEmptyProfile": "Add your age and interests to your profile to see the opportunities that fit you first.",
+  "interests": "Interests"
 }

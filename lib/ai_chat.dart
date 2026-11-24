@@ -62,10 +62,11 @@ class _AiChatState extends State<AiChat> {
 
   String _newChatId() => _messages.doc().id;
 
-  // Open listings and the student's age, sent with every question so answers
+  // Open listings and the student's age and interests, sent with every question so answers
   // come from OpportuNet's own data. Reloaded at most every 10 minutes.
   String? _listings;
   String? _age;
+  String _interests = '';
   DateTime? _contextLoadedAt;
 
   Future<void> _loadContext() async {
@@ -123,6 +124,10 @@ class _AiChatState extends State<AiChat> {
         .get();
     final age = int.tryParse('${profile.data()?['age'] ?? ''}'.trim());
     _age = age != null && age > 5 && age < 100 ? '$age' : null;
+    final interests = profile.data()?['interests'];
+    _interests = interests is List
+        ? interests.whereType<String>().take(12).join(', ')
+        : '';
     _contextLoadedAt = now;
   }
 
@@ -196,6 +201,7 @@ class _AiChatState extends State<AiChat> {
               'Use short headings, bullet points and short paragraphs instead. '
               'Reply in the same language the user writes in.\n\n'
               '${_age == null ? '' : 'The student is $_age years old; check age requirements against this.\n\n'}'
+              '${_interests.isEmpty ? '' : 'The student is interested in: $_interests. Prefer matching opportunities.\n\n'}'
               'These are the opportunities currently open on OpportuNet:\n'
               '${listings.isEmpty ? '(none could be loaded)' : listings}\n\n'
               'When the student asks what to apply to, recommend from this list first. '

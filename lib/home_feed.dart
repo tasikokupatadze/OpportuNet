@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:material_ui/material_ui.dart';
 
 import 'activitydetails.dart';
@@ -92,11 +93,12 @@ const Color _brandDark = brandBlueDark;
 
 enum CostFilter { any, free, paid }
 
-enum SortBy { newest, deadline, title, cheapest }
+enum SortBy { forYou, newest, deadline, title, cheapest }
 
 enum FeedLayout { grid, centered }
 
 String sortLabel(BuildContext context, SortBy sort) => switch (sort) {
+      SortBy.forYou => context.l10n.sortForYou,
       SortBy.newest => context.l10n.sortNewest,
       SortBy.deadline => context.l10n.sortDeadline,
       SortBy.title => context.l10n.sortTitle,
@@ -212,6 +214,61 @@ DateTime? _date(dynamic value) {
 DateTime? _deadline(Map<String, dynamic> data) =>
     _date(data["deadline"]) ?? _date(data["registrationDeadline"]);
 
+/// Whether a student aged [me] fits an age requirement such as "14-18",
+/// "16+" or "15". Unknown requirements fit everyone.
+bool ageFits(String age, int me) {
+  final nums = RegExp(r'\d+')
+      .allMatches(age)
+      .map((m) => int.parse(m.group(0)!))
+      .toList();
+
+  if (nums.isEmpty) return true;
+  if (nums.length == 1) {
+    return age.contains("+") ? me >= nums.first : me == nums.first;
+  }
+  return me >= nums[0] && me <= nums[1];
+}
+
+/// "For you" order: open listings first, then those whose age requirement
+/// fits [age], then those sharing more subjects with [interests], then the
+/// soonest deadline. Listings with no deadline count as open but come after
+/// dated ones.
+int compareForYou(
+  Map<String, dynamic> a,
+  Map<String, dynamic> b, {
+  int? age,
+  Set<String> interests = const {},
+  DateTime? now,
+}) {
+  DateTime? deadlineOf(Map<String, dynamic> data) =>
+      _deadline(data) ?? _date(data["date"]);
+  bool isOpen(Map<String, dynamic> data) {
+    final date = deadlineOf(data);
+    return date == null || daysUntil(date, now: now) >= 0;
+  }
+
+  int fits(Map<String, dynamic> data) =>
+      age != null && ageFits(_str(data, ["ageRequirements", "age"]), age)
+          ? 1
+          : 0;
+  int overlap(Map<String, dynamic> data) =>
+      _subjectsOf(data).where(interests.contains).length;
+
+  var result = (isOpen(b) ? 1 : 0) - (isOpen(a) ? 1 : 0);
+  if (result != 0) return result;
+  result = fits(b) - fits(a);
+  if (result != 0) return result;
+  result = overlap(b) - overlap(a);
+  if (result != 0) return result;
+
+  final da = deadlineOf(a);
+  final db = deadlineOf(b);
+  if (da == null && db == null) return 0;
+  if (da == null) return 1;
+  if (db == null) return -1;
+  return da.compareTo(db);
+}
+
 /// Title, deadline and subjects exactly as the Home feed reads them.
 /// Ask AI uses these to describe listings to the assistant.
 String opportunityTitle(Map<String, dynamic> data) => _title(data);
@@ -262,6 +319,10 @@ class _HomeFeedState extends State<HomeFeed> {
   bool _savedOnly = false;
   Set<String> _saved = {};
   StreamSubscription<Set<String>>? _savedSub;
+  // From users/{uid}, for the "For you" order.
+  int? _profileAge;
+  Set<String> _interests = {};
+  StreamSubscription<DocumentSnapshot<Map<String, dynamic>>>? _profileSub;
 
   @override
   void initState() {
@@ -269,6 +330,25 @@ class _HomeFeedState extends State<HomeFeed> {
     _savedSub = savedOpportunityKeys().listen((keys) {
       if (mounted) setState(() => _saved = keys);
     });
+    final uid = FirebaseAuth.instance.currentUser?.uid;
+    if (uid != null) {
+      _profileSub = FirebaseFirestore.instance
+          .collection('users')
+          .doc(uid)
+          .snapshots()
+          .listen((doc) {
+        final data = doc.data() ?? const <String, dynamic>{};
+        final age = int.tryParse('${data['age'] ?? ''}'.trim());
+        final interests = data['interests'];
+        if (!mounted) return;
+        setState(() {
+          _profileAge = age != null && age > 5 && age < 100 ? age : null;
+          _interests = interests is List
+              ? interests.whereType<String>().toSet()
+              : <String>{};
+        });
+      }, onError: (_) {});
+    }
   }
 
   bool _isSaved(Map<String, dynamic> data) =>
@@ -295,21 +375,9 @@ class _HomeFeedState extends State<HomeFeed> {
   @override
   void dispose() {
     _savedSub?.cancel();
+    _profileSub?.cancel();
     _searchCtrl.dispose();
     super.dispose();
-  }
-
-  bool _ageFits(String age, int me) {
-    final nums = RegExp(r'\d+')
-        .allMatches(age)
-        .map((m) => int.parse(m.group(0)!))
-        .toList();
-
-    if (nums.isEmpty) return true;
-    if (nums.length == 1) {
-      return age.contains("+") ? me >= nums.first : me == nums.first;
-    }
-    return me >= nums[0] && me <= nums[1];
   }
 
   bool _matches(Map<String, dynamic> data) {
@@ -329,7 +397,7 @@ class _HomeFeedState extends State<HomeFeed> {
     if (_cost == CostFilter.paid && (cost.isEmpty || _isFree(cost))) {
       return false;
     }
-    if (_myAge != null && !_ageFits(age, _myAge!)) return false;
+    if (_myAge != null && !ageFits(age, _myAge!)) return false;
 
     final query = _query.toLowerCase().replaceAll(RegExp(r'\s+'), ' ').trim();
     if (query.isEmpty) return true;
@@ -374,6 +442,11 @@ class _HomeFeedState extends State<HomeFeed> {
     }
 
     switch (_sort) {
+      case SortBy.forYou:
+        items.sort((a, b) => compareForYou(a, b,
+            age: _profileAge, interests: _interests));
+        break;
+
       case SortBy.newest:
         items.sort(newest);
         break;
@@ -443,6 +516,21 @@ class _HomeFeedState extends State<HomeFeed> {
                   ),
                 ),
               ),
+              if (_sort == SortBy.forYou &&
+                  _profileAge == null &&
+                  _interests.isEmpty)
+                SliverPadding(
+                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+                  sliver: SliverToBoxAdapter(
+                    child: Card(
+                      child: ListTile(
+                        leading: const Icon(Icons.auto_awesome_rounded,
+                            color: _brandDark),
+                        title: Text(context.l10n.forYouEmptyProfile),
+                      ),
+                    ),
+                  ),
+                ),
               if (snap.hasError)
                 SliverFillRemaining(
                   hasScrollBody: false,

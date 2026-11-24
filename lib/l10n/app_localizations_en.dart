@@ -1013,4 +1013,14 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get turnOn => 'Turn on';
+
+  @override
+  String get sortForYou => 'For you';
+
+  @override
+  String get forYouEmptyProfile =>
+      'Add your age and interests to your profile to see the opportunities that fit you first.';
+
+  @override
+  String get interests => 'Interests';
 }

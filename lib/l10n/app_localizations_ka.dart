@@ -1012,4 +1012,14 @@ class AppLocalizationsKa extends AppLocalizations {
 
   @override
   String get turnOn => 'ჩართვა';
+
+  @override
+  String get sortForYou => 'თქვენთვის';
+
+  @override
+  String get forYouEmptyProfile =>
+      'მიუთითეთ პროფილში ასაკი და ინტერესები, რომ თქვენთვის შესაფერისი შესაძლებლობები პირველ რიგში გამოჩნდეს.';
+
+  @override
+  String get interests => 'ინტერესები';
 }

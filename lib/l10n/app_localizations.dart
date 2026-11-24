@@ -1957,6 +1957,24 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Turn on'**
   String get turnOn;
+
+  /// No description provided for @sortForYou.
+  ///
+  /// In en, this message translates to:
+  /// **'For you'**
+  String get sortForYou;
+
+  /// No description provided for @forYouEmptyProfile.
+  ///
+  /// In en, this message translates to:
+  /// **'Add your age and interests to your profile to see the opportunities that fit you first.'**
+  String get forYouEmptyProfile;
+
+  /// No description provided for @interests.
+  ///
+  /// In en, this message translates to:
+  /// **'Interests'**
+  String get interests;
 }
 
 class _AppLocalizationsDelegate
