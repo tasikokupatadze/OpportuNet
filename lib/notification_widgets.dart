@@ -100,7 +100,7 @@ class NotificationInboxView extends StatelessWidget {
                         spacing: 10,
                         runSpacing: 8,
                         children: [
-                          Text('Latest updates',
+                          Text(context.l10n.latestUpdates,
                               style: Theme.of(context)
                                   .textTheme
                                   .titleLarge
@@ -118,41 +118,41 @@ class NotificationInboxView extends StatelessWidget {
                           style: TextButton.styleFrom(
                               foregroundColor: _readableAccent(context)),
                           child: Text(markingAllRead
-                              ? 'Marking as read…'
-                              : 'Mark all as read'),
+                              ? context.l10n.markingRead
+                              : context.l10n.markAllRead),
                         ),
                     ],
                   ),
                   const SizedBox(height: 14),
                 ],
                 if (signedOut)
-                  const NotificationStateCard(
+                  NotificationStateCard(
                     icon: Icons.lock_outline_rounded,
-                    title: 'Your updates are waiting',
+                    title: context.l10n.updatesWaiting,
                     message:
-                        'Sign in to see new posts and academic calendar updates.',
+                        context.l10n.signInForUpdates,
                   )
                 else if (loadError != null)
                   NotificationStateCard(
                     icon: Icons.cloud_off_outlined,
-                    title: 'Couldn’t load your updates',
+                    title: context.l10n.updatesLoadFailed,
                     message: loadError!,
-                    actionLabel: 'Try again',
+                    actionLabel: context.l10n.tryAgain,
                     onAction: onRetry,
                   )
                 else if (loading)
-                  const NotificationStateCard(
+                  NotificationStateCard(
                     icon: Icons.notifications_outlined,
-                    title: 'Getting your updates',
-                    message: 'Your latest notifications will appear here.',
+                    title: context.l10n.gettingUpdates,
+                    message: context.l10n.notificationsAppearHere,
                     busy: true,
                   )
                 else if (items.isEmpty)
-                  const NotificationStateCard(
+                  NotificationStateCard(
                     icon: Icons.notifications_none_rounded,
-                    title: 'No notifications yet',
+                    title: context.l10n.noNotificationsYet,
                     message:
-                        'New posts and calendar events will appear here. Check back soon.',
+                        context.l10n.notificationsEmptyBody,
                   ),
               ]),
             ),
@@ -179,7 +179,7 @@ class NotificationInboxView extends StatelessWidget {
                 padding: const EdgeInsets.fromLTRB(24, 12, 24, 28),
                 child: ready && items.isNotEmpty
                     ? Text(
-                        'Showing recent notifications',
+                        context.l10n.showingRecent,
                         textAlign: TextAlign.center,
                         style: Theme.of(context).textTheme.bodySmall?.copyWith(
                             color:
@@ -223,10 +223,10 @@ class NotificationHeader extends StatelessWidget {
                   color: brandInk, size: 28),
             ),
             const SizedBox(height: 18),
-            const FittedBox(
+            FittedBox(
               fit: BoxFit.scaleDown,
               alignment: Alignment.centerLeft,
-              child: Text('Notifications',
+              child: Text(context.l10n.notifications,
                   maxLines: 1,
                   softWrap: false,
                   style: TextStyle(
@@ -236,8 +236,8 @@ class NotificationHeader extends StatelessWidget {
                       color: brandInk)),
             ),
             const SizedBox(height: 8),
-            const Text(
-              'New posts and academic calendar updates, all in one place.',
+            Text(
+              context.l10n.notificationsSubtitle,
               style: TextStyle(fontSize: 14, height: 1.5, color: brandInk),
             ),
           ],
@@ -275,7 +275,7 @@ class NotificationAlertsCard extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('Phone & browser alerts',
+                    Text(context.l10n.alertsTitle,
                         style: Theme.of(context)
                             .textTheme
                             .titleMedium
@@ -284,7 +284,7 @@ class NotificationAlertsCard extends StatelessWidget {
                                 color: colors.onSurface)),
                     const SizedBox(height: 5),
                     Text(
-                      enabled ? 'Enabled on this device' : 'Stay up to date',
+                      enabled ? context.l10n.alertsEnabled : context.l10n.stayUpToDate,
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
                           color: _readableAccent(context),
                           fontWeight: FontWeight.w600),
@@ -296,8 +296,8 @@ class NotificationAlertsCard extends StatelessWidget {
             const SizedBox(height: 14),
             Text(
               enabled
-                  ? 'Alerts for new posts and calendar events are enabled for this account on this device.'
-                  : 'Get an alert when someone adds a post or an academic calendar event.',
+                  ? context.l10n.alertsEnabledBody
+                  : context.l10n.alertsOffBody,
               style: Theme.of(context)
                   .textTheme
                   .bodyMedium
@@ -327,10 +327,10 @@ class NotificationAlertsCard extends StatelessWidget {
                         : Icons.notifications_active_outlined),
                 label: Text(
                     busy
-                        ? 'Updating alerts…'
+                        ? context.l10n.updatingAlerts
                         : enabled
-                            ? 'Turn off on this device'
-                            : 'Enable alerts',
+                            ? context.l10n.turnOffAlerts
+                            : context.l10n.enableAlerts,
                     textAlign: TextAlign.center),
               ),
             ),
@@ -367,7 +367,7 @@ class NotificationUpdateCard extends StatelessWidget {
     final theme = Theme.of(context);
     final colors = theme.colorScheme;
     return Semantics(
-      label: item.isUnread ? 'Unread notification' : 'Read notification',
+      label: item.isUnread ? context.l10n.unreadNotification : context.l10n.readNotification,
       child: _Panel(
         highlighted: item.isUnread,
         child: InkWell(
@@ -386,7 +386,7 @@ class NotificationUpdateCard extends StatelessWidget {
                   const SizedBox(width: 12),
                   Expanded(
                     child: Text(
-                      item.isCalendar ? 'Academic calendar' : 'Community post',
+                      item.isCalendar ? context.l10n.academicCalendar : context.l10n.communityPost,
                       style: theme.textTheme.labelLarge?.copyWith(
                           color: _readableAccent(context),
                           fontWeight: FontWeight.w600),
@@ -424,7 +424,7 @@ class NotificationUpdateCard extends StatelessWidget {
                     const SizedBox(width: 6),
                   ],
                   Expanded(
-                    child: Text(item.opening ? 'Opening…' : item.timeLabel,
+                    child: Text(item.opening ? context.l10n.opening : item.timeLabel,
                         style: theme.textTheme.bodySmall
                             ?.copyWith(color: colors.onSurfaceVariant)),
                   ),
@@ -574,7 +574,7 @@ class _UnreadCount extends StatelessWidget {
         decoration: BoxDecoration(
             color: brandBlue.withValues(alpha: 0.18),
             borderRadius: BorderRadius.circular(12)),
-        child: Text('$count unread',
+        child: Text(context.l10n.unreadCount(count),
             style: Theme.of(context).textTheme.labelMedium?.copyWith(
                 fontWeight: FontWeight.w600, color: _readableAccent(context))),
       );

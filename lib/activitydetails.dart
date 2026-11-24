@@ -1,4 +1,5 @@
 import 'app_ui.dart';
+import 'saved_opportunities.dart';
 
 import 'package:material_ui/material_ui.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -24,15 +25,16 @@ class ActivityDetailsScreen extends StatelessWidget {
     final website = activity["website"] ?? "";
     final rawAge =
         (activity["ageRequirements"] ?? activity["age"] ?? "").toString();
-    final age = rawAge.trim().isEmpty ? "Not specified" : rawAge;
+    final age = rawAge.trim().isEmpty ? context.l10n.notSpecified : rawAge;
     final rawCost = (activity["cost"] ?? "").toString();
-    final cost = rawCost.trim().isEmpty ? "Cost not specified" : rawCost;
+    final cost = rawCost.trim().isEmpty ? context.l10n.costNotSpecified : rawCost;
     final imageUrl = activity["imageUrl"] as String?;
 
     return Scaffold(
       appBar: AppBar(
         title: Image.asset('assets/opportunet1.png', height: 60),
         centerTitle: true,
+        actions: [SaveOpportunityButton(data: activity)],
       ),
       body: SafeArea(
         top: false,
@@ -77,7 +79,7 @@ class ActivityDetailsScreen extends StatelessWidget {
                       ),
                       SizedBox(height: 24),
                       Text(
-                        "Description",
+                        context.l10n.description,
                         style: TextStyle(
                           color: Theme.of(context).colorScheme.primary,
                           fontWeight: FontWeight.bold,
@@ -90,7 +92,7 @@ class ActivityDetailsScreen extends StatelessWidget {
                       ListTile(
                         leading: Icon(Icons.people),
                         title: Text(
-                          "Age Requirements",
+                          context.l10n.ageRequirements,
                           style: TextStyle(
                             color: Theme.of(context).colorScheme.primary,
                             fontWeight: FontWeight.bold,
@@ -101,7 +103,7 @@ class ActivityDetailsScreen extends StatelessWidget {
                       ListTile(
                         leading: Icon(Icons.attach_money),
                         title: Text(
-                          "Cost",
+                          context.l10n.cost,
                           style: TextStyle(
                             color: Theme.of(context).colorScheme.primary,
                             fontWeight: FontWeight.bold,
@@ -118,7 +120,7 @@ class ActivityDetailsScreen extends StatelessWidget {
                               : () => _launchWebsite(website),
                           icon: Icon(Icons.open_in_new),
                           label: Text(
-                            "Visit Website",
+                            context.l10n.visitWebsite,
                             style: TextStyle(fontWeight: FontWeight.bold),
                           ),
                         ),

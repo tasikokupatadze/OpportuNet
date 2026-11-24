@@ -63,8 +63,8 @@ class _SchoolScreenState extends State<SchoolScreen> {
       // A device can decline the URL or have no browser available.
     }
     if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-      content: Text('Couldn’t open this school’s website. Please try again.'),
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+      content: Text(context.l10n.couldntOpenSchool),
     ));
   }
 
@@ -150,9 +150,9 @@ class _SchoolScreenState extends State<SchoolScreen> {
                       borderRadius: BorderRadius.circular(14)),
                 ),
                 icon: const Icon(Icons.open_in_new, size: 18),
-                label: Text('Visit website',
+                label: Text(context.l10n.visitWebsite,
                     textAlign: TextAlign.center,
-                    semanticsLabel: 'Visit ${school['title']} website'),
+                    semanticsLabel: context.l10n.visitSchoolWebsite('${school['title']}')),
               ),
             ),
           ],

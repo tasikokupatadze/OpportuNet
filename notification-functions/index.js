@@ -142,3 +142,81 @@ exports.deliverNotificationPush = onDocumentCreated({
     throw error;
   }
 });
+
+// ---------------------------------------------------------------------------
+// Deadline reminders for saved opportunities.
+// Every day at 10:00 Tbilisi time, users get a push 7 days and 1 day before
+// the deadline of each opportunity they saved in the app. Push-only: these are
+// personal, while the notifications collection is readable by every user.
+const { onSchedule } = require('firebase-functions/v2/scheduler');
+const { SECTIONS, reminderDaysFor, titleOf, reminderMessage } = require('./reminder-logic');
+
+async function sendReminder(uid, item, lang) {
+  const devices = await db.collection('users').doc(uid)
+    .collection('notificationDevices').get();
+  const byToken = new Map();
+  for (const device of devices.docs) {
+    const token = device.get('token');
+    if (typeof token === 'string' && token.trim()) byToken.set(token, device.ref);
+  }
+  // No devices means alerts are off for this user.
+  if (!byToken.size) return 0;
+  const tokens = [...byToken.keys()];
+  const result = await getMessaging().sendEachForMulticast({
+    ...reminderMessage(item.section, item.id, item.title, item.days, lang), tokens,
+  });
+  await Promise.all(result.responses.map((response, i) =>
+    !response.success && invalidRegistration(response.error?.code)
+      ? removeInvalidDevice(byToken.get(tokens[i]), tokens[i]) : null));
+  return result.successCount;
+}
+
+exports.sendDeadlineReminders = onSchedule({
+  schedule: 'every day 10:00', timeZone: 'Asia/Tbilisi', region,
+  timeoutSeconds: 540, memory: '256MiB', retryCount: 1,
+}, async () => {
+  const now = new Date();
+  // Opportunities whose deadline is exactly 7 or 1 days away, by "section/id".
+  const due = new Map();
+  for (const section of SECTIONS) {
+    const snap = await db.collection(section).get();
+    for (const doc of snap.docs) {
+      const days = reminderDaysFor(doc.data(), now);
+      if (days) {
+        due.set(`${section}/${doc.id}`,
+          { section, id: doc.id, days, title: titleOf(doc.data()) });
+      }
+    }
+  }
+  if (!due.size) return;
+
+  // shortcut: reads every saved item once a day, fine for a few thousand
+  // saves. Beyond that, add a collection-group index on `key` and query it.
+  let reminders = 0;
+  let pushes = 0;
+  let cursor = null;
+  for (;;) {
+    let query = db.collectionGroup('savedOpportunities')
+      .orderBy(FieldPath.documentId()).limit(500);
+    if (cursor) query = query.startAfter(cursor);
+    const page = await query.get();
+    for (const saved of page.docs) {
+      const item = due.get(saved.get('key'));
+      const userRef = saved.ref.parent.parent;
+      if (!item || !userRef || userRef.parent.id !== 'users') continue;
+      if (saved.get('lastReminderDays') === item.days) continue;
+      pushes += await sendReminder(userRef.id, item, saved.get('lang'));
+      reminders++;
+      try {
+        // Recorded after sending so a retried run skips it.
+        await saved.ref.update({ lastReminderDays: item.days });
+      } catch (error) {
+        // The user unsaved it meanwhile; nothing to record.
+        if (error?.code !== 5 && error?.code !== 'not-found') throw error;
+      }
+    }
+    if (page.size < 500) break;
+    cursor = page.docs[page.docs.length - 1];
+  }
+  logger.info('Deadline reminders sent.', { due: due.size, reminders, pushes });
+});

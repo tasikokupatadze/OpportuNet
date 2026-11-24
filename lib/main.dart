@@ -5,9 +5,6 @@ import 'app_ui.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-import 'dart:convert';
-
-import 'package:http/http.dart' as httpai;
 import 'package:image_picker/image_picker.dart';
 import 'package:flutter/foundation.dart';
 
@@ -26,11 +23,12 @@ import 'savedposts.dart';
 import 'authgate.dart';
 import 'home_feed.dart';
 import 'community_feed.dart';
+import 'ai_chat.dart';
 import 'calendar.dart';
 
-import 'package:flutter_markdown/flutter_markdown.dart';
-
 ValueNotifier<ThemeMode> themeNotifier = ValueNotifier(ThemeMode.light);
+// null = follow the device language.
+ValueNotifier<Locale?> localeNotifier = ValueNotifier(null);
 
 const String profileImageKey = 'profile_image';
 const String aboutMeKey = "about_me";
@@ -43,6 +41,9 @@ void main() async {
   bool isDarkMode = prefs.getBool('isDarkMode') ?? false;
 
   themeNotifier.value = isDarkMode ? ThemeMode.dark : ThemeMode.light;
+
+  final languageCode = prefs.getString('languageCode');
+  if (languageCode != null) localeNotifier.value = Locale(languageCode);
 
   // On Android, use the Firebase app from google-services.json: it is the one
   // registered for this package name and signing key, which Google Sign-In
@@ -63,16 +64,19 @@ class MyApp extends StatelessWidget {
   const MyApp({super.key});
   @override
   Widget build(BuildContext context) {
-    return ValueListenableBuilder<ThemeMode>(
-      valueListenable: themeNotifier,
-      builder: (context, mode, _) {
+    return ListenableBuilder(
+      listenable: Listenable.merge([themeNotifier, localeNotifier]),
+      builder: (context, _) {
         return MaterialApp(
           navigatorKey: notificationNavigatorKey,
           debugShowCheckedModeBanner: false,
           title: 'OpportuNet',
           theme: appTheme(Brightness.light),
           darkTheme: appTheme(Brightness.dark),
-          themeMode: mode,
+          themeMode: themeNotifier.value,
+          locale: localeNotifier.value,
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
           home: const AuthGate(),
         );
       },
@@ -92,20 +96,6 @@ class _HomeScreenState extends State<HomeScreen> {
 
   int _selectedIndex = 0;
   final Set<int> _visitedTabs = {0};
-  late Stream<QuerySnapshot<Map<String, dynamic>>> _messagesStream;
-
-  void _connectMessages() {
-    _messagesStream = FirebaseFirestore.instance
-        .collection('messages')
-        .where('userId', isEqualTo: uid)
-        .orderBy('timestamp', descending: true)
-        .snapshots();
-  }
-
-  bool _editNamePrfl = false;
-  bool _editSurnamePrfl = false;
-  bool _editAgePrfl = false;
-  bool _editAbtMePrfl = false;
   bool _isOrganizer = false;
 
   final ImagePicker _picker = ImagePicker();
@@ -114,7 +104,6 @@ class _HomeScreenState extends State<HomeScreen> {
   final TextEditingController _namePrflctrl = TextEditingController();
   final TextEditingController _surnamePrflctrl = TextEditingController();
   final TextEditingController _agePrflctrl = TextEditingController();
-  late TextEditingController aictrl;
   late String uid;
   final ScrollController scrollctrl = ScrollController();
 
@@ -123,10 +112,8 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   void initState() {
     super.initState();
-    aictrl = TextEditingController();
     final user = FirebaseAuth.instance.currentUser;
     uid = user!.uid;
-    _connectMessages();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) NotificationService.instance.openPending();
     });
@@ -155,7 +142,6 @@ class _HomeScreenState extends State<HomeScreen> {
           'name': '',
           'surname': '',
           'age': '',
-          'email': user.email ?? '',
           'aboutMe': '',
           'profileImage': '',
           'role': 'user',
@@ -165,6 +151,12 @@ class _HomeScreenState extends State<HomeScreen> {
       }
 
       final data = doc.data() ?? <String, dynamic>{};
+
+      // Emails used to be stored on profiles, where any signed-in user could
+      // read them. Remove the old copy; Firebase Auth already has the email.
+      if (data.containsKey('email')) {
+        docRef.update({'email': FieldValue.delete()}).ignore();
+      }
 
       if (!mounted) return;
 
@@ -179,8 +171,8 @@ class _HomeScreenState extends State<HomeScreen> {
     } catch (e) {
       if (!mounted) return;
 
-      ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text("Failed to load profile: $e")));
+      ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(context.l10n.profileLoadFailed)));
     }
   }
 
@@ -200,7 +192,6 @@ class _HomeScreenState extends State<HomeScreen> {
         'age': _agePrflctrl.text.trim(),
         'aboutMe': _abtMePrflctrl.text.trim(),
         'profileImage': _profileImagePath ?? '',
-        'email': user.email ?? '',
       }, SetOptions(merge: true));
 
       // Keep the username on existing posts in sync.
@@ -225,15 +216,15 @@ class _HomeScreenState extends State<HomeScreen> {
       if (!mounted) return true;
 
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Profile updated successfully')),
+        SnackBar(content: Text(context.l10n.profileUpdated)),
       );
 
       return true;
     } catch (e) {
       if (!mounted) return false;
 
-      ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text('Failed to save profile: $e')));
+      ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(context.l10n.profileSaveFailed)));
 
       return false;
     }
@@ -246,119 +237,7 @@ class _HomeScreenState extends State<HomeScreen> {
     _namePrflctrl.dispose();
     _surnamePrflctrl.dispose();
     _agePrflctrl.dispose();
-    aictrl.dispose();
     super.dispose();
-  }
-
-  Future<void> sendMessage() async {
-    final text = aictrl.text.trim();
-    if (text.isEmpty) return;
-
-    if (uid.isEmpty) {
-      return;
-    }
-
-    aictrl.clear();
-
-    DocumentReference? docRef;
-
-    try {
-      docRef = await FirebaseFirestore.instance.collection("messages").add({
-        "text": text,
-        "userId": uid,
-        "timestamp": FieldValue.serverTimestamp(),
-        "aiResponse": null,
-      });
-
-      final messagesSnapshot = await FirebaseFirestore.instance
-          .collection("messages")
-          .where("userId", isEqualTo: uid)
-          .get();
-
-      final docs = messagesSnapshot.docs.toList();
-
-      docs.sort((a, b) {
-        final aTime = a.data()["timestamp"];
-        final bTime = b.data()["timestamp"];
-
-        if (aTime == null && bTime == null) return 0;
-        if (aTime == null) return -1;
-        if (bTime == null) return 1;
-
-        return aTime.compareTo(bTime);
-      });
-
-      final recentDocs =
-          docs.length > 10 ? docs.sublist(docs.length - 10) : docs;
-
-      List<Map<String, dynamic>> history = [
-        {
-          "role": "system",
-          "content":
-              "You are a helpful admissions assistant for Georgian students who want to study abroad. Give clear, practical, supportive answers.",
-        },
-      ];
-
-      for (var doc in recentDocs) {
-        history.add({"role": "user", "content": doc["text"] ?? ""});
-
-        if (doc["aiResponse"] != null &&
-            doc["aiResponse"].toString().isNotEmpty &&
-            !doc["aiResponse"].toString().startsWith("Error") &&
-            !doc["aiResponse"].toString().startsWith("API Error")) {
-          history.add({"role": "assistant", "content": doc["aiResponse"]});
-        }
-      }
-
-      final response = await httpai.post(
-        Uri.parse("https://callai-docslpktsq-uc.a.run.app"),
-        headers: {"Content-Type": "application/json"},
-        body: jsonEncode({
-          "model": "llama-3.1-8b-instant",
-          "messages": history,
-          "temperature": 0.7,
-        }),
-      );
-
-      if (response.statusCode != 200) {
-        await docRef.update({"aiResponse": "API Error ${response.statusCode}"});
-        return;
-      }
-
-      final data = jsonDecode(response.body);
-      final aiText = data["choices"][0]["message"]["content"].toString().trim();
-
-      await docRef.update({"aiResponse": aiText});
-    } catch (e) {
-      if (docRef != null) {
-        await docRef.update({"aiResponse": "Error: $e"});
-      }
-    }
-  }
-
-  Future<void> clearChatHistory() async {
-    final user = FirebaseAuth.instance.currentUser;
-    if (user == null) return;
-
-    try {
-      final snapshot = await FirebaseFirestore.instance
-          .collection('messages')
-          .where('userId', isEqualTo: user.uid)
-          .get();
-
-      for (final doc in snapshot.docs) {
-        await doc.reference.delete();
-      }
-
-      if (!mounted) return;
-      ScaffoldMessenger.of(context)
-          .showSnackBar(const SnackBar(content: Text("Chat history deleted")));
-    } catch (e) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Failed to delete chat history")),
-      );
-    }
   }
 
   void _onItemTapped(int index) {
@@ -428,129 +307,356 @@ class _HomeScreenState extends State<HomeScreen> {
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Failed to upload profile image")),
+        SnackBar(content: Text(context.l10n.profileImageFailed)),
       );
     }
   }
 
-  Widget _profileActionCard({
-    required IconData icon,
-    required String title,
-    required String subtitle,
-    required VoidCallback onTap,
-    Color accent = brandInk,
-  }) {
+  // Instagram-style counts; loaded once and refreshed after visiting Saved.
+  Future<int?>? _postCount;
+  Future<int?>? _savedCount;
+
+  void _loadCounts() {
+    final posts = FirebaseFirestore.instance.collection('posts');
+    _postCount = posts
+        .where('userId', isEqualTo: uid)
+        .count()
+        .get()
+        .then((s) => s.count);
+    _savedCount = posts
+        .where('savedBy', arrayContains: uid)
+        .count()
+        .get()
+        .then((s) => s.count);
+  }
+
+  Future<void> _openSavedPosts() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return;
+    await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => SavedPostsScreen(currentUserId: user.uid),
+      ),
+    );
+    if (mounted) setState(_loadCounts);
+  }
+
+  Future<void> _logOut() async {
+    final messenger = ScaffoldMessenger.of(context);
+    final failed = context.l10n.logoutFailed;
+    try {
+      await NotificationService.instance.signOut();
+    } catch (_) {
+      messenger.showSnackBar(SnackBar(content: Text(failed)));
+    }
+  }
+
+  Future<void> _openEditProfile() async {
+    final before = [
+      _namePrflctrl.text,
+      _surnamePrflctrl.text,
+      _agePrflctrl.text,
+      _abtMePrflctrl.text,
+    ];
+
+    final saved = await showModalBottomSheet<bool>(
+      context: context,
+      isScrollControlled: true,
+      showDragHandle: true,
+      builder: (sheetContext) {
+        var saving = false;
+        return StatefulBuilder(
+          builder: (sheetContext, setSheet) {
+            Widget field(
+              TextEditingController controller,
+              String label,
+              String hint, {
+              TextInputType? keyboardType,
+              int maxLines = 1,
+            }) {
+              return Padding(
+                padding: const EdgeInsets.only(bottom: 12),
+                child: TextField(
+                  controller: controller,
+                  keyboardType: keyboardType,
+                  maxLines: maxLines,
+                  decoration: InputDecoration(
+                    labelText: label,
+                    hintText: hint,
+                    border: const OutlineInputBorder(),
+                  ),
+                ),
+              );
+            }
+
+            return Padding(
+              padding: EdgeInsets.fromLTRB(
+                20,
+                0,
+                20,
+                20 + MediaQuery.viewInsetsOf(sheetContext).bottom,
+              ),
+              child: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Text(
+                      context.l10n.editProfile,
+                      style: const TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    field(_namePrflctrl, context.l10n.name,
+                        context.l10n.enterName),
+                    field(_surnamePrflctrl, context.l10n.surname,
+                        context.l10n.enterSurname),
+                    field(_agePrflctrl, context.l10n.age, context.l10n.enterAge,
+                        keyboardType: TextInputType.number),
+                    field(_abtMePrflctrl, context.l10n.aboutMe,
+                        context.l10n.aboutMeHint,
+                        maxLines: 4),
+                    const SizedBox(height: 4),
+                    FilledButton(
+                      onPressed: saving
+                          ? null
+                          : () async {
+                              setSheet(() => saving = true);
+                              final ok = await _saveProfile();
+                              if (!sheetContext.mounted) return;
+                              if (ok) {
+                                Navigator.pop(sheetContext, true);
+                              } else {
+                                setSheet(() => saving = false);
+                              }
+                            },
+                      style: FilledButton.styleFrom(
+                        minimumSize: const Size.fromHeight(48),
+                      ),
+                      child: saving
+                          ? const BusyIndicator()
+                          : Text(context.l10n.save),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
+
+    if (saved != true) {
+      // Closed without saving: put the old values back.
+      _namePrflctrl.text = before[0];
+      _surnamePrflctrl.text = before[1];
+      _agePrflctrl.text = before[2];
+      _abtMePrflctrl.text = before[3];
+    }
+    if (mounted) setState(() {});
+  }
+
+  Widget _stat(Future<int?> count, String label, {VoidCallback? onTap}) {
     return InkWell(
-      borderRadius: BorderRadius.circular(18),
       onTap: onTap,
-      child: Container(
-        padding: EdgeInsets.all(14),
-        decoration: BoxDecoration(
-          color: Theme.of(context).colorScheme.surface,
-          borderRadius: BorderRadius.circular(18),
-        ),
+      borderRadius: BorderRadius.circular(12),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
         child: Column(
+          mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(icon, color: accent, size: 24),
-            SizedBox(height: 8),
-            Text(
-              title,
-              style: TextStyle(
-                fontWeight: FontWeight.bold,
-                color: Theme.of(context).colorScheme.onSurface,
+            FutureBuilder<int?>(
+              future: count,
+              builder: (context, snapshot) => Text(
+                snapshot.data?.toString() ?? '–',
+                style: const TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
             ),
-            SizedBox(height: 2),
-            Text(
-              subtitle,
-              style: TextStyle(
-                color: Theme.of(context).colorScheme.onSurfaceVariant,
-                fontSize: 12,
-              ),
-              textAlign: TextAlign.center,
-            ),
+            Text(label, style: const TextStyle(fontSize: 13)),
           ],
         ),
       ),
     );
   }
 
-  Widget _profileEditCard({
-    required String title,
-    required IconData icon,
-    required bool isEditing,
-    required TextEditingController controller,
-    required String hintText,
-    required Future<void> Function() onPressed,
-    TextInputType keyboardType = TextInputType.text,
-    int maxLines = 1,
-  }) {
-    return Container(
-      width: double.infinity,
-      padding: EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: Theme.of(context).cardColor,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: Theme.of(context).colorScheme.outlineVariant),
-        boxShadow: [
-          BoxShadow(
-            color:
-                Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.03),
-            blurRadius: 8,
-            offset: Offset(0, 4),
-          ),
-        ],
-      ),
-      child: Row(
-        crossAxisAlignment:
-            maxLines > 1 ? CrossAxisAlignment.start : CrossAxisAlignment.center,
+  Widget _profileTab() {
+    if (_postCount == null) _loadCounts();
+    final colors = Theme.of(context).colorScheme;
+    final fullName = "${_namePrflctrl.text} ${_surnamePrflctrl.text}".trim();
+    final bio = _abtMePrflctrl.text.trim();
+
+    return ContentWidth(
+      maxWidth: 800,
+      child: ListView(
+        padding: const EdgeInsets.fromLTRB(16, 20, 16, 24),
         children: [
-          Container(
-            padding: EdgeInsets.all(10),
-            decoration: BoxDecoration(
-              color: brandBlue.withValues(alpha: 0.18),
-              borderRadius: BorderRadius.circular(14),
-            ),
-            child: Icon(icon, color: brandBlueDark),
-          ),
-          SizedBox(width: 12),
-          Expanded(
-            child: isEditing
-                ? TextField(
-                    controller: controller,
-                    keyboardType: keyboardType,
-                    maxLines: maxLines,
-                    decoration: InputDecoration(
-                      hintText: hintText,
-                      border: OutlineInputBorder(),
-                      isDense: true,
+          // Photo + counts
+          Row(
+            children: [
+              GestureDetector(
+                onTap: _pickImage,
+                child: Stack(
+                  alignment: Alignment.bottomRight,
+                  children: [
+                    CircleAvatar(
+                      radius: 44,
+                      backgroundColor: colors.surfaceContainerHighest,
+                      backgroundImage: _getProfileImage(),
                     ),
-                  )
-                : Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        title,
-                        style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant, fontSize: 13),
+                    Container(
+                      padding: const EdgeInsets.all(5),
+                      decoration: BoxDecoration(
+                        color: brandBlueDark,
+                        shape: BoxShape.circle,
+                        border: Border.all(color: colors.surface, width: 2),
                       ),
-                      SizedBox(height: 4),
-                      Text(
-                        controller.text.trim().isEmpty
-                            ? "Not added yet"
-                            : controller.text.trim(),
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w600,
-                        ),
+                      child: const Icon(
+                        Icons.camera_alt,
+                        color: Colors.white,
+                        size: 14,
                       ),
-                    ],
-                  ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                  children: [
+                    _stat(_postCount!, context.l10n.posts),
+                    _stat(_savedCount!, context.l10n.saved,
+                        onTap: _openSavedPosts),
+                  ],
+                ),
+              ),
+            ],
           ),
-          SizedBox(width: 8),
-          IconButton(
-            onPressed: onPressed,
-            icon: Icon(isEditing ? Icons.check_circle : Icons.edit_outlined),
-            color: isEditing ? Colors.green : brandBlueDark,
+          const SizedBox(height: 12),
+
+          // Name + bio
+          Text(
+            fullName.isEmpty ? context.l10n.yourProfile : fullName,
+            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            bio.isEmpty ? context.l10n.aboutMePrompt : bio,
+            style: TextStyle(
+              fontSize: 14,
+              color: bio.isEmpty ? colors.onSurfaceVariant : colors.onSurface,
+            ),
+          ),
+          const SizedBox(height: 14),
+
+          // Buttons
+          Row(
+            children: [
+              Expanded(
+                child: FilledButton.tonal(
+                  onPressed: _openEditProfile,
+                  child: Text(context.l10n.editProfile),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: FilledButton.tonalIcon(
+                  onPressed: _openSavedPosts,
+                  icon: const Icon(Icons.bookmark_border, size: 18),
+                  label: Text(context.l10n.savedPosts),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 28),
+
+          // Settings
+          Text(
+            context.l10n.settings,
+            style: TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
+              color: colors.onSurfaceVariant,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Card(
+            margin: EdgeInsets.zero,
+            elevation: 0,
+            color: colors.surfaceContainerLow,
+            clipBehavior: Clip.antiAlias,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+              side: BorderSide(color: colors.outlineVariant),
+            ),
+            child: Column(
+              children: [
+                ValueListenableBuilder<ThemeMode>(
+                  valueListenable: themeNotifier,
+                  builder: (context, mode, _) => SwitchListTile(
+                    secondary: const Icon(Icons.dark_mode_outlined),
+                    title: Text(context.l10n.appearance),
+                    subtitle: Text(context.l10n.appearanceSubtitle),
+                    value: mode == ThemeMode.dark,
+                    onChanged: (value) async {
+                      themeNotifier.value =
+                          value ? ThemeMode.dark : ThemeMode.light;
+                      final prefs = await SharedPreferences.getInstance();
+                      await prefs.setBool('isDarkMode', value);
+                    },
+                  ),
+                ),
+                Divider(height: 1, color: colors.outlineVariant),
+                ListTile(
+                  leading: const Icon(Icons.translate_rounded),
+                  title: Text(context.l10n.language),
+                  subtitle: Padding(
+                    padding: const EdgeInsets.only(top: 8),
+                    // Full width so each language gets half the row and
+                    // "ქართული" never wraps.
+                    child: SizedBox(
+                      width: double.infinity,
+                      // Language names stay in their own language.
+                      child: SegmentedButton<String>(
+                        showSelectedIcon: false,
+                        style: SegmentedButton.styleFrom(
+                          selectedBackgroundColor: brandBlue,
+                          selectedForegroundColor: brandInk,
+                          side: const BorderSide(color: brandBlueDark),
+                        ),
+                        segments: const [
+                          ButtonSegment(value: 'ka', label: Text('ქართული')),
+                          ButtonSegment(value: 'en', label: Text('English')),
+                        ],
+                        selected: {
+                          Localizations.localeOf(context).languageCode,
+                        },
+                        onSelectionChanged: (values) async {
+                          localeNotifier.value = Locale(values.first);
+                          final prefs = await SharedPreferences.getInstance();
+                          await prefs.setString('languageCode', values.first);
+                        },
+                      ),
+                    ),
+                  ),
+                ),
+                Divider(height: 1, color: colors.outlineVariant),
+                ListTile(
+                  leading: Icon(Icons.logout, color: colors.error),
+                  title: Text(
+                    context.l10n.logOut,
+                    style: TextStyle(color: colors.error),
+                  ),
+                  onTap: _logOut,
+                ),
+              ],
+            ),
           ),
         ],
       ),
@@ -564,519 +670,10 @@ class _HomeScreenState extends State<HomeScreen> {
       case 1:
         return CommunityFeed();
       case 2:
-        return ContentWidth(
-          maxWidth: 800,
-          child: Container(
-            color: Theme.of(context).scaffoldBackgroundColor,
-            child: Column(
-              children: [
-                Container(
-                  width: double.infinity,
-                  padding: EdgeInsets.fromLTRB(16, 16, 16, 12),
-                  decoration: BoxDecoration(
-                    color: Theme.of(context).colorScheme.surface,
-                    border: Border(bottom: BorderSide(color: Theme.of(context).colorScheme.outlineVariant)),
-                  ),
-                  child: Row(
-                    children: [
-                      Icon(Icons.auto_awesome, color: brandBlueDark),
-                      SizedBox(width: 10),
-                      Text(
-                        "Ask AI",
-                        style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      Spacer(),
-                      IconButton(
-                        tooltip: "Delete chat history",
-                        icon: Icon(
-                          Icons.delete_outline,
-                          color: Theme.of(context).colorScheme.error,
-                        ),
-                        onPressed: () async {
-                          final shouldDelete = await showDialog<bool>(
-                            context: context,
-                            builder: (context) => AlertDialog(
-                              title: Text("Delete chat history?"),
-                              content: Text(
-                                "This will remove all your AI messages",
-                              ),
-                              actions: [
-                                TextButton(
-                                  onPressed: () =>
-                                      Navigator.pop(context, false),
-                                  child: Text("Cancel"),
-                                ),
-                                TextButton(
-                                  onPressed: () => Navigator.pop(context, true),
-                                  style: TextButton.styleFrom(
-                                    foregroundColor:
-                                        Theme.of(context).colorScheme.error,
-                                  ),
-                                  child: Text("Delete"),
-                                ),
-                              ],
-                            ),
-                          );
-                          if (shouldDelete == true) {
-                            await clearChatHistory();
-                          }
-                        },
-                      ),
-                    ],
-                  ),
-                ),
-                Expanded(
-                  child: StreamBuilder(
-                    stream: _messagesStream,
-                    builder: (context, snapshot) {
-                      if (snapshot.hasError) {
-                        return LoadError(
-                          message:
-                              'Could not load your messages. Check your connection and try again.',
-                          onRetry: () => setState(_connectMessages),
-                        );
-                      }
-
-                      if (snapshot.connectionState == ConnectionState.waiting) {
-                        return Center(child: CircularProgressIndicator());
-                      }
-
-                      if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-                        return _AiEmptyState(
-                          onPick: (question) {
-                            aictrl.text = question;
-                            sendMessage();
-                          },
-                        );
-                      }
-
-                      final docs = snapshot.data!.docs;
-
-                      return ListView.builder(
-                        reverse: true,
-                        itemCount: docs.length,
-                        itemBuilder: (context, index) {
-                          final doc = docs[index];
-
-                          final text = doc["text"] ?? "";
-                          final aiResponse = doc["aiResponse"];
-
-                          return Column(
-                            crossAxisAlignment: CrossAxisAlignment.stretch,
-                            children: [
-                              Align(
-                                alignment: Alignment.centerRight,
-                                child: Container(
-                                  margin: EdgeInsets.symmetric(vertical: 4),
-                                  padding: EdgeInsets.all(12),
-                                  decoration: BoxDecoration(
-                                    color: brandBlue,
-                                    borderRadius: BorderRadius.circular(18),
-                                  ),
-                                  child: Text(
-                                    text,
-                                    style: TextStyle(color: brandInk),
-                                  ),
-                                ),
-                              ),
-                              if (aiResponse == null ||
-                                  aiResponse.toString().isEmpty)
-                                Align(
-                                  alignment: Alignment.centerLeft,
-                                  child: Container(
-                                    margin: EdgeInsets.symmetric(vertical: 4),
-                                    padding: EdgeInsets.all(12),
-                                    decoration: BoxDecoration(
-                                      color: Theme.of(context)
-                                          .colorScheme
-                                          .surfaceContainerHighest,
-                                      borderRadius: BorderRadius.circular(18),
-                                    ),
-                                    child: Row(
-                                      mainAxisSize: MainAxisSize.min,
-                                      children: [
-                                        SizedBox(
-                                          width: 14,
-                                          height: 14,
-                                          child: CircularProgressIndicator(
-                                            strokeWidth: 2,
-                                          ),
-                                        ),
-                                        SizedBox(width: 8),
-                                        Text("AI is thinking..."),
-                                      ],
-                                    ),
-                                  ),
-                                )
-                              else
-                                Padding(
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 16,
-                                    vertical: 8,
-                                  ),
-                                  child: _AiReply(
-                                    key: ValueKey(doc.id),
-                                    text: aiResponse.toString(),
-                                  ),
-                                ),
-                            ],
-                          );
-                        },
-                      );
-                    },
-                  ),
-                ),
-                Container(
-                  padding: EdgeInsets.fromLTRB(12, 10, 12, 14),
-                  decoration: BoxDecoration(
-                    color: Theme.of(context).colorScheme.surface,
-                    border: Border(top: BorderSide(color: Theme.of(context).colorScheme.outlineVariant)),
-                  ),
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.end,
-                    children: [
-                      Expanded(
-                        child: Container(
-                          padding: EdgeInsets.symmetric(horizontal: 14),
-                          decoration: BoxDecoration(
-                            color: Theme.of(context)
-                                .colorScheme
-                                .surfaceContainerHighest,
-                            borderRadius: BorderRadius.circular(20),
-                          ),
-                          child: TextField(
-                            controller: aictrl,
-                            keyboardType: TextInputType.multiline,
-                            minLines: 1,
-                            maxLines: 5,
-                            textCapitalization: TextCapitalization.sentences,
-                            decoration: InputDecoration(
-                              hintText: "Ask something...",
-                              border: InputBorder.none,
-                              isDense: true,
-                            ),
-                          ),
-                        ),
-                      ),
-                      SizedBox(width: 8),
-                      Container(
-                        decoration: BoxDecoration(
-                          color: brandBlue,
-                          shape: BoxShape.circle,
-                        ),
-                        child: IconButton(
-                          icon: Icon(Icons.send, color: brandInk),
-                          onPressed: () {
-                            sendMessage();
-                          },
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ),
-        );
+        return AiChat(uid: uid);
 
       case 3:
-        return ContentWidth(
-          maxWidth: 800,
-          child: Container(
-            color: Theme.of(context).scaffoldBackgroundColor,
-            child: Column(
-              children: [
-                Expanded(
-                  child: SingleChildScrollView(
-                    padding: EdgeInsets.fromLTRB(16, 18, 16, 24),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Container(
-                          width: double.infinity,
-                          padding: EdgeInsets.all(20),
-                          decoration: BoxDecoration(
-                            gradient: LinearGradient(
-                              colors: [brandBlue, Color(0xffb6ebff)],
-                              begin: Alignment.topLeft,
-                              end: Alignment.bottomRight,
-                            ),
-                            borderRadius: BorderRadius.circular(24),
-                          ),
-                          child: Column(
-                            children: [
-                              GestureDetector(
-                                onTap: _pickImage,
-                                child: Stack(
-                                  alignment: Alignment.bottomRight,
-                                  children: [
-                                    CircleAvatar(
-                                      radius: 56,
-                                      backgroundColor: Colors.white,
-                                      child: CircleAvatar(
-                                        radius: 52,
-                                        backgroundImage: _getProfileImage(),
-                                      ),
-                                    ),
-                                    Container(
-                                      padding: EdgeInsets.all(8),
-                                      decoration: BoxDecoration(
-                                        color: Theme.of(context)
-                                            .colorScheme
-                                            .onSurface,
-                                        borderRadius: BorderRadius.circular(20),
-                                      ),
-                                      child: Icon(
-                                        Icons.camera_alt,
-                                        color: Theme.of(context)
-                                            .colorScheme
-                                            .surface,
-                                        size: 18,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                              SizedBox(height: 14),
-                              Text(
-                                "${_namePrflctrl.text} ${_surnamePrflctrl.text}"
-                                        .trim()
-                                        .isEmpty
-                                    ? "Your Profile"
-                                    : "${_namePrflctrl.text} ${_surnamePrflctrl.text}"
-                                        .trim(),
-                                textAlign: TextAlign.center,
-                                style: TextStyle(
-                                  fontSize: 24,
-                                  fontWeight: FontWeight.bold,
-                                  color: brandInk,
-                                ),
-                              ),
-                              SizedBox(height: 8),
-                              Text(
-                                _abtMePrflctrl.text.trim().isEmpty
-                                    ? "Tap edit below to add something about yourself."
-                                    : _abtMePrflctrl.text.trim(),
-                                textAlign: TextAlign.center,
-                                style: TextStyle(
-                                  fontSize: 14,
-                                  color: brandInk,
-                                ),
-                              ),
-                              SizedBox(height: 18),
-                              Row(
-                                children: [
-                                  Expanded(
-                                    child: _profileActionCard(
-                                      icon: Icons.bookmark_border,
-                                      accent: Colors.amber.shade800,
-                                      title: "Saved Posts",
-                                      subtitle: "Open collection",
-                                      onTap: () {
-                                        final user =
-                                            FirebaseAuth.instance.currentUser;
-                                        if (user == null) return;
-
-                                        Navigator.push(
-                                          context,
-                                          MaterialPageRoute(
-                                            builder: (_) => SavedPostsScreen(
-                                              currentUserId: user.uid,
-                                            ),
-                                          ),
-                                        );
-                                      },
-                                    ),
-                                  ),
-                                  SizedBox(width: 12),
-                                  Expanded(
-                                    child: _profileActionCard(
-                                      icon: Icons.logout,
-                                      accent: Colors.red,
-                                      title: "Log out",
-                                      subtitle: "Leave account",
-                                      onTap: () async {
-                                        final messenger =
-                                            ScaffoldMessenger.of(context);
-                                        try {
-                                          await NotificationService.instance
-                                              .signOut();
-                                        } catch (_) {
-                                          messenger.showSnackBar(
-                                            const SnackBar(
-                                              content: Text(
-                                                'Could not finish logging out. Check your connection and try again.',
-                                              ),
-                                            ),
-                                          );
-                                        }
-                                      },
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ],
-                          ),
-                        ),
-                        SizedBox(height: 22),
-                        Text(
-                          "Profile details",
-                          style: TextStyle(
-                            fontSize: 20,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        SizedBox(height: 14),
-                        _profileEditCard(
-                          title: "Name",
-                          icon: Icons.badge_outlined,
-                          isEditing: _editNamePrfl,
-                          controller: _namePrflctrl,
-                          hintText: "Enter your name",
-                          onPressed: () async {
-                            if (_editNamePrfl) {
-                              final saved = await _saveProfile();
-                              if (!saved) return;
-                            }
-
-                            setState(() {
-                              _editNamePrfl = !_editNamePrfl;
-                            });
-                          },
-                        ),
-                        SizedBox(height: 12),
-                        _profileEditCard(
-                          title: "Surname",
-                          icon: Icons.person_outline,
-                          isEditing: _editSurnamePrfl,
-                          controller: _surnamePrflctrl,
-                          hintText: "Enter your surname",
-                          onPressed: () async {
-                            if (_editSurnamePrfl) {
-                              final saved = await _saveProfile();
-                              if (!saved) return;
-                            }
-
-                            setState(() {
-                              _editSurnamePrfl = !_editSurnamePrfl;
-                            });
-                          },
-                        ),
-                        SizedBox(height: 12),
-                        _profileEditCard(
-                          title: "Age",
-                          icon: Icons.cake_outlined,
-                          isEditing: _editAgePrfl,
-                          controller: _agePrflctrl,
-                          hintText: "Enter your age",
-                          keyboardType: TextInputType.number,
-                          onPressed: () async {
-                            if (_editAgePrfl) {
-                              final saved = await _saveProfile();
-                              if (!saved) return;
-                            }
-
-                            setState(() {
-                              _editAgePrfl = !_editAgePrfl;
-                            });
-                          },
-                        ),
-                        SizedBox(height: 12),
-                        _profileEditCard(
-                          title: "About me",
-                          icon: Icons.edit_note,
-                          isEditing: _editAbtMePrfl,
-                          controller: _abtMePrflctrl,
-                          hintText: "Tell people something about yourself",
-                          maxLines: 4,
-                          onPressed: () async {
-                            if (_editAbtMePrfl) {
-                              final saved = await _saveProfile();
-                              if (!saved) return;
-                            }
-
-                            setState(() {
-                              _editAbtMePrfl = !_editAbtMePrfl;
-                            });
-                          },
-                        ),
-                        SizedBox(height: 18),
-                        Container(
-                          width: double.infinity,
-                          padding: EdgeInsets.all(14),
-                          decoration: BoxDecoration(
-                            color: Theme.of(context).cardColor,
-                            borderRadius: BorderRadius.circular(20),
-                            border: Border.all(color: Theme.of(context).colorScheme.outlineVariant),
-                          ),
-                          child: ValueListenableBuilder<ThemeMode>(
-                            valueListenable: themeNotifier,
-                            builder: (context, mode, _) {
-                              return Row(
-                                children: [
-                                  Container(
-                                    padding: EdgeInsets.all(10),
-                                    decoration: BoxDecoration(
-                                      color: brandBlue
-                                          .withValues(alpha: 0.18),
-                                      borderRadius: BorderRadius.circular(14),
-                                    ),
-                                    child: Icon(
-                                      Icons.dark_mode_outlined,
-                                      color: brandBlueDark,
-                                    ),
-                                  ),
-                                  SizedBox(width: 12),
-                                  Expanded(
-                                    child: Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
-                                      children: [
-                                        Text(
-                                          "Appearance",
-                                          style: TextStyle(
-                                            fontWeight: FontWeight.bold,
-                                            fontSize: 16,
-                                          ),
-                                        ),
-                                        SizedBox(height: 2),
-                                        Text(
-                                          "Switch between light and dark mode",
-                                          style: TextStyle(
-                                            color: Theme.of(context).colorScheme.onSurfaceVariant,
-                                            fontSize: 13,
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                  Switch(
-                                    value: mode == ThemeMode.dark,
-                                    onChanged: (value) async {
-                                      themeNotifier.value = value
-                                          ? ThemeMode.dark
-                                          : ThemeMode.light;
-                                      SharedPreferences prefs =
-                                          await SharedPreferences.getInstance();
-                                      await prefs.setBool('isDarkMode', value);
-                                    },
-                                  ),
-                                ],
-                              );
-                            },
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        );
+        return _profileTab();
       default:
         return SizedBox();
     }
@@ -1098,10 +695,11 @@ class _HomeScreenState extends State<HomeScreen> {
       child: Scaffold(
         appBar: AppBar(
           automaticallyImplyLeading: false,
-            leading: IconButton(
+          leading: IconButton(
             key: const ValueKey('home-calendar-shortcut'),
-            tooltip: "Academic calendar",
-            icon: const Icon(Icons.calendar_month_outlined, color: brandBlueDark),
+            tooltip: context.l10n.academicCalendar,
+            icon:
+                const Icon(Icons.calendar_month_outlined, color: brandBlueDark),
             onPressed: () => Navigator.push(
               context,
               MaterialPageRoute(
@@ -1128,146 +726,30 @@ class _HomeScreenState extends State<HomeScreen> {
         bottomNavigationBar: NavigationBar(
           selectedIndex: _selectedIndex,
           onDestinationSelected: _onItemTapped,
-          destinations: const [
+          destinations: [
             NavigationDestination(
-              icon: Icon(Icons.home_outlined),
-              selectedIcon: Icon(Icons.home_rounded),
-              label: "Home",
+              icon: Icon(Icons.home_outlined, color: brandBlueDark),
+              selectedIcon: Icon(Icons.home_rounded, color: brandBlueDark),
+              label: context.l10n.navHome,
             ),
             NavigationDestination(
-              icon: Icon(Icons.forum_outlined),
-              selectedIcon: Icon(Icons.forum_rounded),
-              label: "Community",
+              icon: Icon(Icons.forum_outlined, color: brandBlueDark),
+              selectedIcon: Icon(Icons.forum_rounded, color: brandBlueDark),
+              label: context.l10n.navCommunity,
             ),
             NavigationDestination(
-              icon: Icon(Icons.auto_awesome_outlined),
-              selectedIcon: Icon(Icons.auto_awesome),
-              label: "Ask AI",
+              icon: Icon(Icons.auto_awesome_outlined, color: brandBlueDark),
+              selectedIcon: Icon(Icons.auto_awesome, color: brandBlueDark),
+              label: context.l10n.navAskAi,
             ),
             NavigationDestination(
-              icon: Icon(Icons.person_outline_rounded),
-              selectedIcon: Icon(Icons.person_rounded),
-              label: "Profile",
+              icon: Icon(Icons.person_outline_rounded, color: brandBlueDark),
+              selectedIcon: Icon(Icons.person_rounded, color: brandBlueDark),
+              label: context.l10n.navProfile,
             ),
           ],
         ),
       ),
-    );
-  }
-}
-
-class _AiEmptyState extends StatelessWidget {
-  const _AiEmptyState({required this.onPick});
-
-  final ValueChanged<String> onPick;
-
-  static const _questions = [
-    "Which summer programs should I apply to this year?",
-    "Which scholarships cover full tuition abroad?",
-    "How do I prepare for the SAT from Georgia?",
-  ];
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = Theme.of(context).colorScheme;
-
-    return Center(
-      child: SingleChildScrollView(
-        padding: const EdgeInsets.all(24),
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 420),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Icon(Icons.auto_awesome, size: 36, color: brandBlueDark),
-              const SizedBox(height: 10),
-              const Text(
-                "Ask about studying abroad",
-                textAlign: TextAlign.center,
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                "Deadlines, essays, scholarships, tests.",
-                textAlign: TextAlign.center,
-                style: TextStyle(color: colors.onSurfaceVariant),
-              ),
-              const SizedBox(height: 18),
-              for (final question in _questions)
-                Padding(
-                  padding: const EdgeInsets.only(bottom: 8),
-                  child: SizedBox(
-                    width: double.infinity,
-                    child: OutlinedButton(
-                      onPressed: () => onPick(question),
-                      style: OutlinedButton.styleFrom(
-                        alignment: Alignment.centerLeft,
-                        minimumSize: const Size(48, 48),
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 14,
-                          vertical: 12,
-                        ),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(14),
-                        ),
-                      ),
-                      child: Text(question),
-                    ),
-                  ),
-                ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _AiReply extends StatelessWidget {
-  const _AiReply({super.key, required this.text});
-
-  final String text;
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = Theme.of(context).colorScheme;
-
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final compact = constraints.maxWidth <= 480;
-        final bodyStyle = TextStyle(
-          color: colors.onSurface,
-          fontSize: compact ? 13 : 14,
-          height: compact ? 1.35 : 1.5,
-          letterSpacing: compact ? 0 : null,
-        );
-
-        TextStyle heading(double size) => TextStyle(
-              color: colors.onSurface,
-              fontSize: size,
-              fontWeight: FontWeight.bold,
-            );
-
-        return MarkdownBody(
-          data: text,
-          styleSheet: MarkdownStyleSheet(
-            p: bodyStyle,
-            h1: heading(compact ? 18 : 22),
-            h2: heading(compact ? 16 : 19),
-            h3: heading(compact ? 14 : 16),
-            listBullet: bodyStyle,
-            code: TextStyle(
-              color: colors.onSurface,
-              backgroundColor: colors.surfaceContainerHighest,
-              fontSize: compact ? 12 : 13,
-            ),
-            codeblockDecoration: BoxDecoration(
-              color: colors.surfaceContainerHighest,
-              borderRadius: BorderRadius.circular(8),
-            ),
-          ),
-        );
-      },
     );
   }
 }

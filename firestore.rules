@@ -1,83 +1,208 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-  
-  function signedIn() {
-  return request.auth != null;
-  }
-  
-  function isOrganizer() {
-  return signedIn() && 
-  get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == "organizer";
-  }
-  
-  match /calendarEvents/{eventId} {
+
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function isOrganizer() {
+      return signedIn() &&
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == "organizer";
+    }
+
+    match /calendarEvents/{eventId} {
       allow read: if true;
       allow create, update, delete: if isOrganizer();
     }
-  
-  match /exchange/{activityId} {
+
+    match /exchange/{activityId} {
       allow read: if true;
       allow create, update, delete: if isOrganizer();
     }
-  match /olympiads/{activityId} {
+
+    match /olympiads/{activityId} {
       allow read: if true;
       allow create, update, delete: if isOrganizer();
     }
-  match /volunteering/{activityId} {
+
+    match /volunteering/{activityId} {
       allow read: if true;
       allow create, update, delete: if isOrganizer();
     }
-  
- match /users/{userId} {
 
-    allow read: if request.auth != null
-                && request.auth.uid == userId;
+    match /users/{userId} {
+      allow read: if signedIn();
 
-    allow create: if request.auth != null
-                  && request.auth.uid == userId
-                  && request.resource.data.role == resource.data.role;
+      allow create: if signedIn()
+        && request.auth.uid == userId
+        && request.resource.data.role == "user";
 
-    allow update: if request.auth != null
-                  && request.auth.uid == userId
-                  && request.resource.data.role == resource.data.role;
+      allow update: if signedIn()
+        && request.auth.uid == userId
+        && request.resource.data.role == resource.data.role;
 
-    allow delete: if false;
-  }
-match /posts/{postId} {
+      allow delete: if false;
+    }
 
-  allow read: if true;
+    match /users/{uid}/notificationDevices/{deviceId} {
+      allow read, delete: if request.auth != null && request.auth.uid == uid;
+      allow create, update: if request.auth != null && request.auth.uid == uid
+        && request.resource.data.keys().hasOnly(['token', 'platform', 'updatedAt'])
+        && request.resource.data.keys().hasAll(['token', 'platform', 'updatedAt'])
+        && request.resource.data.token is string
+        && request.resource.data.token.size() > 0
+        && request.resource.data.token.size() <= 4096
+        && request.resource.data.platform in ['web', 'android', 'ios']
+        && request.resource.data.updatedAt == request.time;
+    }
 
-  allow create: if request.auth != null
-                && request.resource.data.userId == request.auth.uid;
+    match /users/{uid}/notificationReads/{notificationId} {
+      allow read, delete: if request.auth != null && request.auth.uid == uid;
+      allow create, update: if request.auth != null && request.auth.uid == uid
+        && request.resource.data.keys().hasOnly(['readAt'])
+        && request.resource.data.keys().hasAll(['readAt'])
+        && request.resource.data.readAt == request.time
+        && exists(/databases/$(database)/documents/notifications/$(notificationId));
+    }
 
-  allow update: if request.auth != null
-                && request.resource.data.userId == resource.data.userId;
+    // Opportunities a user bookmarked. Private to that user; the daily
+    // sendDeadlineReminders function (Admin SDK) adds lastReminderDays.
+    match /users/{uid}/savedOpportunities/{savedId} {
+      allow read, delete: if request.auth != null && request.auth.uid == uid;
+      allow create, update: if request.auth != null && request.auth.uid == uid
+        && request.resource.data.keys().hasOnly(
+          ['key', 'section', 'opportunityId', 'lang', 'savedAt', 'lastReminderDays'])
+        && request.resource.data.section in ['olympiads', 'volunteering', 'exchange']
+        && request.resource.data.opportunityId is string
+        && request.resource.data.opportunityId.size() > 0
+        && request.resource.data.opportunityId.size() <= 128
+        && request.resource.data.key ==
+          request.resource.data.section + '/' + request.resource.data.opportunityId
+        && savedId ==
+          request.resource.data.section + '_' + request.resource.data.opportunityId
+        && request.resource.data.lang in ['en', 'ka'];
+    }
 
-  allow delete: if request.auth != null
-                && resource.data.userId == request.auth.uid;
+    match /posts/{postId} {
 
-  match /comments/{commentId} {
+      // Allow changes only to the signed-in user's membership.
+      function changesOnlyOwnMembership(before, after) {
+        return before is list && after is list
+          && before.size() == before.toSet().size()
+          && after.size() == after.toSet().size()
+          && after.toSet().difference(before.toSet())
+              .hasOnly([request.auth.uid])
+          && before.toSet().difference(after.toSet())
+              .hasOnly([request.auth.uid]);
+      }
 
-    allow read: if true;
+      function validLikeUpdate() {
+        let before = resource.data.get('likedBy', []);
+        let after = request.resource.data.get('likedBy', []);
+        let oldCount = resource.data.get('likes', 0);
+        let newCount = request.resource.data.get('likes', 0);
 
-    allow create: if request.auth != null
-                  && request.resource.data.userId == request.auth.uid;
+        return request.resource.data.diff(resource.data).affectedKeys()
+            .hasOnly(['likedBy', 'likes'])
+          && changesOnlyOwnMembership(before, after)
+          && oldCount is int && newCount is int
+          && newCount >= 0
+          && newCount == oldCount + after.size() - before.size();
+      }
 
-    allow update: if request.auth != null
-                  && request.resource.data.userId == resource.data.userId;
+      function validSaveUpdate() {
+        return request.resource.data.diff(resource.data).affectedKeys()
+            .hasOnly(['savedBy'])
+          && changesOnlyOwnMembership(
+            resource.data.get('savedBy', []),
+            request.resource.data.get('savedBy', [])
+          );
+      }
 
-    allow delete: if request.auth != null
-                  && resource.data.userId == request.auth.uid;
-  }
-}
+      // Preserve the app's current comment-counter updates.
+      // This does not verify that a matching comment was written.
+      function validCommentCountUpdate() {
+        let before = resource.data.get('commentsCount', 0);
+        let after = request.resource.data.get('commentsCount', 0);
+
+        return request.resource.data.diff(resource.data).affectedKeys()
+            .hasOnly(['commentsCount'])
+          && before is int && after is int
+          && after >= 0
+          && (after == before + 1 || after == before - 1);
+      }
+
+      allow read: if true;
+
+      // Posts must start with no likes, saves or comments.
+      allow create: if signedIn()
+        && request.resource.data.userId == request.auth.uid
+        && request.resource.data.get('likes', 0) == 0
+        && request.resource.data.get('likedBy', []).size() == 0
+        && request.resource.data.get('savedBy', []).size() == 0
+        && request.resource.data.get('commentsCount', 0) == 0;
+
+      allow update: if signedIn()
+        && request.resource.data.userId == resource.data.userId
+        && (
+          (
+            resource.data.userId == request.auth.uid
+            && request.resource.data.diff(resource.data).affectedKeys()
+              .hasOnly([
+                'text', 'imageUrl', 'category', 'username',
+                'profileImage', 'edited', 'editedAt'
+              ])
+          )
+          || validLikeUpdate()
+          || validSaveUpdate()
+          || validCommentCountUpdate()
+        );
+
+      allow delete: if signedIn()
+        && (
+          resource.data.userId == request.auth.uid ||
+          isOrganizer()
+        );
+
+      match /comments/{commentId} {
+        allow read: if true;
+
+        allow create: if signedIn()
+          && request.resource.data.userId == request.auth.uid;
+
+        // Authors can edit only the text and edit metadata.
+        allow update: if signedIn()
+          && resource.data.userId == request.auth.uid
+          && request.resource.data.userId == resource.data.userId
+          && request.resource.data.diff(resource.data).affectedKeys()
+              .hasOnly(['text', 'edited', 'editedAt']);
+
+        // Authors can delete their own comments.
+        // Organizers can delete any comment.
+        allow delete: if signedIn()
+          && (
+            resource.data.userId == request.auth.uid ||
+            isOrganizer()
+          );
+      }
+    }
+
+    match /notifications/{notificationId} {
+      allow read: if request.auth != null;
+      allow write: if false; // Cloud Functions Admin SDK bypasses rules.
+    }
+
+    match /_notificationDelivery/{notificationId} {
+      allow read, write: if false;
+    }
 
     match /messages/{messageId} {
-      allow create: if request.auth != null &&
-        request.resource.data.userId == request.auth.uid;
+      allow create: if signedIn()
+        && request.resource.data.userId == request.auth.uid;
 
-      allow read, update, delete: if request.auth != null &&
-        resource.data.userId == request.auth.uid;
+      allow read, update, delete: if signedIn()
+        && resource.data.userId == request.auth.uid;
     }
   }
 }

@@ -53,7 +53,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
         builder: (dialogContext, setDialog) => PopScope(
           canPop: !saving,
           child: AlertDialog(
-            title: const Text('Add event'),
+            title: Text(context.l10n.addEvent),
             content: SingleChildScrollView(
               child: Form(
                 key: formKey,
@@ -63,12 +63,12 @@ class _CalendarScreenState extends State<CalendarScreen> {
                     TextFormField(
                       controller: titleController,
                       enabled: !saving,
-                      decoration: const InputDecoration(
-                        labelText: 'Event title',
+                      decoration: InputDecoration(
+                        labelText: context.l10n.eventTitle,
                       ),
                       validator: (value) =>
                           value == null || value.trim().isEmpty
-                              ? 'Enter an event title'
+                              ? context.l10n.enterEventTitle
                               : null,
                     ),
                     const SizedBox(height: 12),
@@ -76,20 +76,20 @@ class _CalendarScreenState extends State<CalendarScreen> {
                       controller: descriptionController,
                       enabled: !saving,
                       maxLines: 3,
-                      decoration: const InputDecoration(
-                        labelText: 'Description',
+                      decoration: InputDecoration(
+                        labelText: context.l10n.description,
                       ),
                     ),
                     const SizedBox(height: 12),
                     DropdownButtonFormField<String>(
                       initialValue: category,
                       isExpanded: true,
-                      decoration: const InputDecoration(labelText: 'Category'),
+                      decoration: InputDecoration(labelText: context.l10n.category),
                       items: const ['Competitions', 'Tests', 'Decisions']
                           .map(
                             (value) => DropdownMenuItem(
                               value: value,
-                              child: Text(value),
+                              child: Text(_eventCategoryLabel(context, value)),
                             ),
                           )
                           .toList(),
@@ -118,7 +118,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
             actions: [
               TextButton(
                 onPressed: saving ? null : () => Navigator.pop(dialogContext),
-                child: const Text('Cancel'),
+                child: Text(context.l10n.cancel),
               ),
               ElevatedButton(
                 onPressed: saving
@@ -153,11 +153,11 @@ class _CalendarScreenState extends State<CalendarScreen> {
                           setDialog(() {
                             saving = false;
                             error =
-                                'Could not add the event. Please try again.';
+                                context.l10n.addEventFailed;
                           });
                         }
                       },
-                child: saving ? const BusyIndicator() : const Text('Add'),
+                child: saving ? const BusyIndicator() : Text(context.l10n.add),
               ),
             ],
           ),
@@ -169,6 +169,15 @@ class _CalendarScreenState extends State<CalendarScreen> {
     titleController.dispose();
     descriptionController.dispose();
   }
+
+  // Event categories are stored in English; this only changes the label.
+  String _eventCategoryLabel(BuildContext context, String category) =>
+      switch (category) {
+        'Competitions' => context.l10n.evCompetitions,
+        'Tests' => context.l10n.evTests,
+        'Decisions' => context.l10n.evDecisions,
+        _ => category,
+      };
 
   Color _categoryColor(String category) {
     final dark = Theme.of(context).brightness == Brightness.dark;
@@ -198,7 +207,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
         floatingActionButton: widget.isOrganizer
             ? FloatingActionButton(
                 onPressed: _addEvent,
-                tooltip: 'Add event',
+                tooltip: context.l10n.addEvent,
                 child: const Icon(Icons.add),
               )
             : null,
@@ -212,7 +221,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
                 if (snapshot.hasError)
                   {
                     return LoadError(
-                      message: 'Could not load calendar events.',
+                      message: context.l10n.loadCalendarFailed,
                       onRetry: () => setState(_connect),
                     );
                   }
@@ -310,17 +319,20 @@ class _CalendarScreenState extends State<CalendarScreen> {
                       child: Padding(
                         padding: const EdgeInsets.all(16),
                         child: Text(
-                          'Due on ${_selectedDay.day}/${_selectedDay.month}/${_selectedDay.year}',
+                          context.l10n.dueOn(
+                            MaterialLocalizations.of(context)
+                                .formatMediumDate(_selectedDay),
+                          ),
                           style: Theme.of(context).textTheme.titleLarge,
                         ),
                       ),
                     ),
                     if (selectedEvents.isEmpty)
-                      const SliverToBoxAdapter(
+                      SliverToBoxAdapter(
                         child: Padding(
                           padding: EdgeInsets.all(24),
                           child: Text(
-                            'No events for this day',
+                            context.l10n.noEventsToday,
                             textAlign: TextAlign.center,
                           ),
                         ),
@@ -351,7 +363,10 @@ class _CalendarScreenState extends State<CalendarScreen> {
                                     ],
                                     const SizedBox(height: 8),
                                     Text(
-                                      event.category,
+                                      _eventCategoryLabel(
+                                        context,
+                                        event.category,
+                                      ),
                                       style: TextStyle(
                                         color: color,
                                         fontWeight: FontWeight.w600,

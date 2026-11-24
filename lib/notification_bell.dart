@@ -61,10 +61,10 @@ class _UnreadBellState extends State<_UnreadBell> {
                     .length
                 : 0;
             final label = failed
-                ? 'Could not load notifications. Open to retry.'
+                ? context.l10n.notificationsLoadFailed
                 : count == 0
-                    ? 'Notifications'
-                    : 'Notifications: $count unread recent updates';
+                    ? context.l10n.notifications
+                    : context.l10n.notificationsUnreadLabel(count);
             final theme = Theme.of(context);
             return Padding(
               padding: const EdgeInsets.only(right: 12),

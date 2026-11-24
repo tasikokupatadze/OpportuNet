@@ -46,7 +46,6 @@ Future<void> createUserDoc(User user, {String? name, String? surname}) async {
       'name': name ?? (nameParts.isNotEmpty ? nameParts.first : ''),
       'surname':
           surname ?? (nameParts.length > 1 ? nameParts.skip(1).join(' ') : ''),
-      'email': user.email ?? '',
       'role': 'user',
       'aboutMe': '',
       'profileImage': '',
@@ -225,7 +224,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     controller: loginemailctrl,
                     keyboardType: TextInputType.emailAddress,
                     decoration: InputDecoration(
-                      labelText: "Email",
+                      labelText: context.l10n.email,
                       prefixIcon: const Icon(
                         Icons.email_outlined,
                         color: darkBrand,
@@ -256,7 +255,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     controller: loginpswrdctrl,
                     obscureText: _isPswrdHidden,
                     decoration: InputDecoration(
-                      labelText: "Password",
+                      labelText: context.l10n.password,
                       prefixIcon: const Icon(
                         Icons.lock_outline,
                         color: darkBrand,
@@ -306,8 +305,8 @@ class _LoginScreenState extends State<LoginScreen> {
                                 ),
                               );
                             },
-                      child: const Text(
-                        "Forgot password?",
+                      child: Text(
+                        context.l10n.forgotPassword,
                         style: TextStyle(
                           color: darkBrand,
                           fontWeight: FontWeight.w600,
@@ -328,8 +327,8 @@ class _LoginScreenState extends State<LoginScreen> {
                               if (loginemailctrl.text.trim().isEmpty ||
                                   loginpswrdctrl.text.isEmpty) {
                                 ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(
-                                    content: Text("Please fill all fields"),
+                                  SnackBar(
+                                    content: Text(context.l10n.fillAllFields),
                                   ),
                                 );
                                 return;
@@ -370,9 +369,9 @@ class _LoginScreenState extends State<LoginScreen> {
                                   if (!context.mounted) return;
 
                                   ScaffoldMessenger.of(context).showSnackBar(
-                                    const SnackBar(
+                                    SnackBar(
                                       content: Text(
-                                        'Please verify your email before logging in.',
+                                        context.l10n.verifyEmailFirst,
                                       ),
                                     ),
                                   );
@@ -402,24 +401,24 @@ class _LoginScreenState extends State<LoginScreen> {
                                 switch (e.code) {
                                   case 'user-not-found':
                                   case 'invalid-credential':
-                                    message = 'Incorrect email or password.';
+                                    message = context.l10n.wrongEmailOrPassword;
                                     break;
                                   case 'wrong-password':
-                                    message = 'Incorrect password.';
+                                    message = context.l10n.wrongPassword;
                                     break;
                                   case 'invalid-email':
-                                    message = 'Please enter a valid email.';
+                                    message = context.l10n.invalidEmail;
                                     break;
                                   case 'too-many-requests':
                                     message =
-                                        'Too many attempts. Please try again later.';
+                                        context.l10n.tooManyAttempts;
                                     break;
                                   case 'need-email-login':
                                     message =
-                                        'Please log in using your email and password first.';
+                                        context.l10n.emailLoginFirst;
                                     break;
                                   default:
-                                    message = 'Login failed. Please try again.';
+                                    message = context.l10n.loginFailed;
                                 }
 
                                 if (!context.mounted) return;
@@ -431,9 +430,9 @@ class _LoginScreenState extends State<LoginScreen> {
                                 if (!context.mounted) return;
 
                                 ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(
+                                  SnackBar(
                                     content: Text(
-                                      'Something went wrong. Please try again.',
+                                      context.l10n.somethingWentWrong,
                                     ),
                                   ),
                                 );
@@ -452,8 +451,8 @@ class _LoginScreenState extends State<LoginScreen> {
                       ),
                       child: _isSigningIn
                           ? const BusyIndicator()
-                          : const Text(
-                              "Login",
+                          : Text(
+                              context.l10n.logIn,
                               style: TextStyle(
                                 fontSize: 17,
                                 fontWeight: FontWeight.bold,
@@ -475,7 +474,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       Padding(
                         padding: const EdgeInsets.symmetric(horizontal: 12),
                         child: Text(
-                          "OR",
+                          context.l10n.or,
                           style: TextStyle(
                             color: Colors.grey.shade600,
                             fontSize: 12,
@@ -520,8 +519,9 @@ class _LoginScreenState extends State<LoginScreen> {
                                   SnackBar(
                                     content: Text(
                                       e.code == 'need-email-login'
-                                          ? 'Log in with email/password first to link Google.'
-                                          : 'Google sign-in could not finish (${e.code}). Please try again.',
+                                          ? context.l10n.linkGoogleNeedsEmail
+                                          : context.l10n
+                                              .googleCouldNotFinishCode(e.code),
                                     ),
                                   ),
                                 );
@@ -535,8 +535,11 @@ class _LoginScreenState extends State<LoginScreen> {
                                     duration: const Duration(seconds: 8),
                                     content: Text(
                                       e.code == GoogleSignInExceptionCode.canceled
-                                          ? 'Google sign-in was cancelled.'
-                                          : 'Google sign-in failed (${e.code.name}): ${e.description ?? 'unknown error'}',
+                                          ? context.l10n.googleCancelled
+                                          : context.l10n.googleFailed(
+                                              e.code.name,
+                                              e.description ?? 'unknown error',
+                                            ),
                                     ),
                                   ),
                                 );
@@ -544,9 +547,9 @@ class _LoginScreenState extends State<LoginScreen> {
                                 debugPrint('GOOGLE SIGN-IN ERROR: $e\n$stack');
                                 if (!context.mounted) return;
                                 ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(
+                                  SnackBar(
                                     content: Text(
-                                      'Google sign-in could not finish. Please try again.',
+                                      context.l10n.googleCouldNotFinish,
                                     ),
                                   ),
                                 );
@@ -558,7 +561,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       icon: Image.asset("assets/google.webp", height: 22),
                       label: _isGoogleSigningIn
                           ? const BusyIndicator()
-                          : const Text("Continue with Google"),
+                          : Text(context.l10n.continueWithGoogle),
                       style: OutlinedButton.styleFrom(
                         foregroundColor: darkBrand,
                         side: BorderSide(
@@ -583,7 +586,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       alignment: WrapAlignment.center,
                       crossAxisAlignment: WrapCrossAlignment.center,
                       children: [
-                        const Text("Don't have an account? "),
+                        Text(context.l10n.noAccount),
                         TextButton(
                           onPressed: _isBusy
                               ? null
@@ -600,8 +603,8 @@ class _LoginScreenState extends State<LoginScreen> {
                             minimumSize: const Size(48, 48),
                             tapTargetSize: MaterialTapTargetSize.padded,
                           ),
-                          child: const Text(
-                            "Sign up",
+                          child: Text(
+                            context.l10n.signUp,
                             style: TextStyle(
                               color: darkBrand,
                               fontWeight: FontWeight.bold,

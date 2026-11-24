@@ -27,7 +27,7 @@ class _ResetPassScreenState extends State<ResetPassScreen> {
     // Check for empty email
     if (email.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Please enter your email address")),
+        SnackBar(content: Text(context.l10n.enterEmail)),
       );
       return;
     }
@@ -37,7 +37,7 @@ class _ResetPassScreenState extends State<ResetPassScreen> {
 
     if (!emailRegex.hasMatch(email)) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Please enter a valid email address")),
+        SnackBar(content: Text(context.l10n.invalidEmail)),
       );
       return;
     }
@@ -49,10 +49,9 @@ class _ResetPassScreenState extends State<ResetPassScreen> {
       if (!mounted) return;
 
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
+        SnackBar(
           content: Text(
-            "If an account exists for this email, "
-            "you will receive a password reset link.",
+            context.l10n.resetLinkSent,
           ),
         ),
       );
@@ -63,16 +62,16 @@ class _ResetPassScreenState extends State<ResetPassScreen> {
 
       switch (e.code) {
         case 'invalid-email':
-          message = "Please enter a valid email address.";
+          message = context.l10n.invalidEmail;
           break;
         case 'too-many-requests':
-          message = "Too many attempts. Please try again later.";
+          message = context.l10n.tooManyAttempts;
           break;
         case 'network-request-failed':
-          message = "Check your internet connection.";
+          message = context.l10n.checkInternet;
           break;
         default:
-          message = "Unable to process your request. Please try again.";
+          message = context.l10n.requestFailed;
       }
 
       ScaffoldMessenger.of(context)
@@ -81,8 +80,8 @@ class _ResetPassScreenState extends State<ResetPassScreen> {
       if (!mounted) return;
 
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text("Something went wrong. Please try again."),
+        SnackBar(
+          content: Text(context.l10n.somethingWentWrong),
         ),
       );
     } finally {
@@ -108,8 +107,8 @@ class _ResetPassScreenState extends State<ResetPassScreen> {
               children: [
                 TextField(
                   controller: _emailresetctrl,
-                  decoration: const InputDecoration(
-                    labelText: "Email",
+                  decoration: InputDecoration(
+                    labelText: context.l10n.email,
                     border: OutlineInputBorder(),
                   ),
                   keyboardType: TextInputType.emailAddress,
@@ -121,8 +120,8 @@ class _ResetPassScreenState extends State<ResetPassScreen> {
                     onPressed: _isSending ? null : resetPassword,
                     child: _isSending
                         ? const BusyIndicator()
-                        : const Text(
-                            "Reset Password",
+                        : Text(
+                            context.l10n.resetPassword,
                             style: TextStyle(
                               fontWeight: FontWeight.bold,
                               fontSize: 15,

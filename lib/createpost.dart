@@ -34,7 +34,7 @@ class _CreatePostState extends State<CreatePost> {
 
     if (text.isEmpty || user == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Write something before posting")),
+        SnackBar(content: Text(context.l10n.writeSomethingFirst)),
       );
       return;
     }
@@ -53,9 +53,9 @@ class _CreatePostState extends State<CreatePost> {
         if (!mounted) return;
 
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
+          SnackBar(
             content: Text(
-              "Your profile could not be found. Please log out and log in again.",
+              context.l10n.profileNotFound,
             ),
           ),
         );
@@ -90,7 +90,7 @@ class _CreatePostState extends State<CreatePost> {
       Navigator.pop(context);
     } catch (e) {
       ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text("Failed to post: $e")));
+          .showSnackBar(SnackBar(content: Text(context.l10n.postFailed)));
     } finally {
       if (mounted) {
         setState(() {
@@ -143,7 +143,7 @@ class _CreatePostState extends State<CreatePost> {
                             ),
                             SizedBox(width: 12),
                             Text(
-                              "Share something",
+                              context.l10n.shareSomething,
                               style: TextStyle(
                                 fontSize: 18,
                                 fontWeight: FontWeight.bold,
@@ -156,7 +156,7 @@ class _CreatePostState extends State<CreatePost> {
                         DropdownButtonFormField<String>(
                           initialValue: _selectedCategory,
                           decoration: InputDecoration(
-                            labelText: 'Post category',
+                            labelText: context.l10n.postCategory,
                             prefixIcon: const Icon(
                               Icons.category_outlined,
                               color: Color(0xff2b88b4),
@@ -168,7 +168,7 @@ class _CreatePostState extends State<CreatePost> {
                           items: _categories.map((category) {
                             return DropdownMenuItem<String>(
                               value: category,
-                              child: Text(category),
+                              child: Text(postCategoryLabel(context, category)),
                             );
                           }).toList(),
                           onChanged: (value) {
@@ -198,8 +198,8 @@ class _CreatePostState extends State<CreatePost> {
                               maxLines: null,
                               expands: true,
                               textAlignVertical: TextAlignVertical.top,
-                              decoration: const InputDecoration(
-                                hintText: "Write something...",
+                              decoration: InputDecoration(
+                                hintText: context.l10n.writeSomething,
                                 border: InputBorder.none,
                               ),
                               style: TextStyle(
@@ -231,8 +231,8 @@ class _CreatePostState extends State<CreatePost> {
                                       strokeWidth: 2,
                                     ),
                                   )
-                                : const Text(
-                                    "Post",
+                                : Text(
+                                    context.l10n.post,
                                     style: TextStyle(
                                       fontSize: 16,
                                       fontWeight: FontWeight.bold,

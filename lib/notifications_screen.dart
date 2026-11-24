@@ -2,11 +2,15 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:material_ui/material_ui.dart';
 
+import 'activitydetails.dart';
 import 'app_ui.dart';
 import 'calendar.dart';
 import 'community_feed.dart';
+// Prefixed: community_feed.dart has its own kCategories.
+import 'home_feed.dart' as home show kCategories, kCategoryField;
 import 'notification_service.dart';
 import 'notification_widgets.dart';
+import 'saved_opportunities.dart' show kIdField;
 
 const recentNotificationLimit = 50;
 
@@ -49,11 +53,17 @@ Future<void> openAppNotification(
   }
   final type = data['type']?.toString();
   final targetId = data['targetId']?.toString() ?? '';
+  // Deadline reminders for saved opportunities (sendDeadlineReminders).
+  // They are push-only, so there is no inbox entry to mark as read.
+  if (type == 'opportunity') {
+    await openOpportunity(context, data['section']?.toString() ?? '', targetId);
+    return;
+  }
   if (targetId.isEmpty ||
       targetId.contains('/') ||
       (type != 'post' && type != 'calendar')) {
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('This notification cannot be opened.')),
+      SnackBar(content: Text(context.l10n.notificationCantOpen)),
     );
     return;
   }
@@ -73,9 +83,9 @@ Future<void> openAppNotification(
       if (!context.mounted || FirebaseAuth.instance.currentUser?.uid != uid) {
         return;
       }
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
         content: Text(
-            'Could not mark this notification as read. You can still view the update.'),
+            context.l10n.markReadFailedView),
       ));
     }
   }
@@ -100,8 +110,8 @@ Future<void> openAppNotification(
       return;
     }
     if (!event.exists) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-        content: Text('This calendar event is no longer available.'),
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text(context.l10n.eventUnavailable),
       ));
       return;
     }
@@ -131,10 +141,49 @@ Future<void> openAppNotification(
     if (!context.mounted || FirebaseAuth.instance.currentUser?.uid != uid) {
       return;
     }
-    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
       content: Text(
-          'Could not open this event. Check your connection and try again.'),
+          context.l10n.eventOpenFailed),
     ));
+  }
+}
+
+/// Opens one listing by section and id. Also used for links in Ask AI replies,
+/// so it validates both before reading Firestore.
+Future<void> openOpportunity(
+  BuildContext context,
+  String section,
+  String id,
+) async {
+  final messenger = ScaffoldMessenger.of(context);
+  final l10n = context.l10n;
+  if (!home.kCategories.containsKey(section) || id.isEmpty || id.contains('/')) {
+    messenger.showSnackBar(
+        SnackBar(content: Text(l10n.notificationCantOpen)));
+    return;
+  }
+  try {
+    final doc = await FirebaseFirestore.instance
+        .collection(section)
+        .doc(id)
+        .get()
+        .timeout(const Duration(seconds: 8));
+    if (!context.mounted) return;
+    if (!doc.exists) {
+      messenger.showSnackBar(
+          SnackBar(content: Text(l10n.opportunityUnavailable)));
+      return;
+    }
+    await Navigator.of(context).push(MaterialPageRoute<void>(
+      builder: (_) => ActivityDetailsScreen(activity: {
+        ...doc.data()!,
+        home.kCategoryField: section,
+        kIdField: id,
+      }),
+    ));
+  } catch (_) {
+    messenger.showSnackBar(
+        SnackBar(content: Text(l10n.opportunityOpenFailed)));
   }
 }
 
@@ -198,9 +247,9 @@ class _NotificationInboxState extends State<_NotificationInbox> {
       await batch.commit().timeout(const Duration(seconds: 8));
     } catch (_) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
           content:
-              Text('Could not mark notifications as read. Please try again.'),
+              Text(context.l10n.markAllReadFailed),
         ));
       }
     } finally {
@@ -260,7 +309,7 @@ class _NotificationInboxState extends State<_NotificationInbox> {
                           '${localizations.formatTimeOfDay(TimeOfDay.fromDateTime(date))}';
                   return NotificationItemData(
                     id: doc.id,
-                    title: data['title']?.toString() ?? 'New update',
+                    title: data['title']?.toString() ?? context.l10n.newUpdate,
                     body: data['body']?.toString() ?? '',
                     timeLabel: timeLabel,
                     isCalendar: data['type'] == 'calendar',
@@ -272,7 +321,7 @@ class _NotificationInboxState extends State<_NotificationInbox> {
                   items: items,
                   loading: loading,
                   loadError:
-                      hasError ? 'Check your connection and try again.' : null,
+                      hasError ? context.l10n.checkConnection : null,
                   onRetry: () => setState(_connect),
                   alertsEnabled: service.enabled,
                   alertsBusy: service.busy,
@@ -353,17 +402,17 @@ class _NotificationPostScreenState extends State<NotificationPostScreen> {
                 builder: (context, snapshot) {
                   if (snapshot.hasError) {
                     return LoadError(
-                        message: 'Could not load this post.',
+                        message: context.l10n.loadPostFailed,
                         onRetry: () => setState(_connect));
                   }
                   if (!snapshot.hasData) {
                     return const Center(child: CircularProgressIndicator());
                   }
                   if (snapshot.data!.docs.isEmpty) {
-                    return const Center(
+                    return Center(
                         child: Padding(
                             padding: EdgeInsets.all(24),
-                            child: Text('This post is no longer available.',
+                            child: Text(context.l10n.postUnavailable,
                                 textAlign: TextAlign.center)));
                   }
                   return ListView(padding: const EdgeInsets.all(14), children: [
