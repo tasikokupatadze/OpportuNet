@@ -714,7 +714,7 @@ class _AiEmptyState extends StatelessWidget {
   }
 }
 
-/// Links in AI replies: opportunet://<section>/<id> opens the listing in the
+/// Links in AI replies: `opportunet://<section>/<id>` opens the listing in the
 /// app (written by the assistant from the listings it was given); web links
 /// open in the browser. Anything else is ignored.
 void _openLink(BuildContext context, String? href) {

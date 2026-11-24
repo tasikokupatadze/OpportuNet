@@ -4,6 +4,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:table_calendar/table_calendar.dart';
 // table_calendar's header buttons are flutter/material InkWells, which only see a
 // flutter/material Material ancestor, not material_ui's.
+// ignore: deprecated_member_use
 import 'package:flutter/material.dart' as flutter_material
     show Material, MaterialType;
 
