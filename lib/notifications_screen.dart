@@ -343,7 +343,7 @@ class _NotificationPostScreenState extends State<NotificationPostScreen> {
 
   @override
   Widget build(BuildContext context) => Scaffold(
-        appBar: AppBar(title: const Text('Post')),
+        appBar: AppBar(centerTitle: true, title: const AppLogo()),
         body: SafeArea(
             top: false,
             child: ContentWidth(

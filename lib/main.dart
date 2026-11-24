@@ -26,6 +26,7 @@ import 'savedposts.dart';
 import 'authgate.dart';
 import 'home_feed.dart';
 import 'community_feed.dart';
+import 'calendar.dart';
 
 import 'package:flutter_markdown/flutter_markdown.dart';
 
@@ -490,7 +491,7 @@ class _HomeScreenState extends State<HomeScreen> {
       decoration: BoxDecoration(
         color: Theme.of(context).cardColor,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: Colors.grey.shade300),
+        border: Border.all(color: Theme.of(context).colorScheme.outlineVariant),
         boxShadow: [
           BoxShadow(
             color:
@@ -507,10 +508,10 @@ class _HomeScreenState extends State<HomeScreen> {
           Container(
             padding: EdgeInsets.all(10),
             decoration: BoxDecoration(
-              color: Color(0xff84d6fe).withValues(alpha: 0.18),
+              color: brandBlue.withValues(alpha: 0.18),
               borderRadius: BorderRadius.circular(14),
             ),
-            child: Icon(icon, color: Color(0xff2b88b4)),
+            child: Icon(icon, color: brandBlueDark),
           ),
           SizedBox(width: 12),
           Expanded(
@@ -530,7 +531,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     children: [
                       Text(
                         title,
-                        style: TextStyle(color: Colors.grey, fontSize: 13),
+                        style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant, fontSize: 13),
                       ),
                       SizedBox(height: 4),
                       Text(
@@ -549,7 +550,7 @@ class _HomeScreenState extends State<HomeScreen> {
           IconButton(
             onPressed: onPressed,
             icon: Icon(isEditing ? Icons.check_circle : Icons.edit_outlined),
-            color: isEditing ? Colors.green : Color(0xff2b88b4),
+            color: isEditing ? Colors.green : brandBlueDark,
           ),
         ],
       ),
@@ -574,14 +575,14 @@ class _HomeScreenState extends State<HomeScreen> {
                   padding: EdgeInsets.fromLTRB(16, 16, 16, 12),
                   decoration: BoxDecoration(
                     color: Theme.of(context).colorScheme.surface,
-                    border: Border(bottom: BorderSide(color: Colors.black12)),
+                    border: Border(bottom: BorderSide(color: Theme.of(context).colorScheme.outlineVariant)),
                   ),
                   child: Row(
                     children: [
-                      Icon(Icons.smart_toy, color: Color(0xff84d6fe)),
+                      Icon(Icons.auto_awesome, color: brandBlueDark),
                       SizedBox(width: 10),
                       Text(
-                        "AI Assistant",
+                        "Ask AI",
                         style: TextStyle(
                           fontSize: 18,
                           fontWeight: FontWeight.bold,
@@ -589,9 +590,10 @@ class _HomeScreenState extends State<HomeScreen> {
                       ),
                       Spacer(),
                       IconButton(
+                        tooltip: "Delete chat history",
                         icon: Icon(
                           Icons.delete_outline,
-                          color: Colors.redAccent,
+                          color: Theme.of(context).colorScheme.error,
                         ),
                         onPressed: () async {
                           final shouldDelete = await showDialog<bool>(
@@ -605,17 +607,15 @@ class _HomeScreenState extends State<HomeScreen> {
                                 TextButton(
                                   onPressed: () =>
                                       Navigator.pop(context, false),
-                                  child: Text(
-                                    "Cancel",
-                                    style: TextStyle(color: Color(0xff84d6fe)),
-                                  ),
+                                  child: Text("Cancel"),
                                 ),
                                 TextButton(
                                   onPressed: () => Navigator.pop(context, true),
-                                  child: Text(
-                                    "Delete",
-                                    style: TextStyle(color: Color(0xff84d6fe)),
+                                  style: TextButton.styleFrom(
+                                    foregroundColor:
+                                        Theme.of(context).colorScheme.error,
                                   ),
+                                  child: Text("Delete"),
                                 ),
                               ],
                             ),
@@ -645,7 +645,12 @@ class _HomeScreenState extends State<HomeScreen> {
                       }
 
                       if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-                        return Center(child: Text("No messages yet"));
+                        return _AiEmptyState(
+                          onPick: (question) {
+                            aictrl.text = question;
+                            sendMessage();
+                          },
+                        );
                       }
 
                       final docs = snapshot.data!.docs;
@@ -668,7 +673,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                   margin: EdgeInsets.symmetric(vertical: 4),
                                   padding: EdgeInsets.all(12),
                                   decoration: BoxDecoration(
-                                    color: Color(0xff84d6fe),
+                                    color: brandBlue,
                                     borderRadius: BorderRadius.circular(18),
                                   ),
                                   child: Text(
@@ -728,7 +733,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   padding: EdgeInsets.fromLTRB(12, 10, 12, 14),
                   decoration: BoxDecoration(
                     color: Theme.of(context).colorScheme.surface,
-                    border: Border(top: BorderSide(color: Colors.black12)),
+                    border: Border(top: BorderSide(color: Theme.of(context).colorScheme.outlineVariant)),
                   ),
                   child: Row(
                     crossAxisAlignment: CrossAxisAlignment.end,
@@ -759,7 +764,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       SizedBox(width: 8),
                       Container(
                         decoration: BoxDecoration(
-                          color: Color(0xff84d6fe),
+                          color: brandBlue,
                           shape: BoxShape.circle,
                         ),
                         child: IconButton(
@@ -795,7 +800,7 @@ class _HomeScreenState extends State<HomeScreen> {
                           padding: EdgeInsets.all(20),
                           decoration: BoxDecoration(
                             gradient: LinearGradient(
-                              colors: [Color(0xff84d6fe), Color(0xffb6ebff)],
+                              colors: [brandBlue, Color(0xffb6ebff)],
                               begin: Alignment.topLeft,
                               end: Alignment.bottomRight,
                             ),
@@ -1005,7 +1010,7 @@ class _HomeScreenState extends State<HomeScreen> {
                           decoration: BoxDecoration(
                             color: Theme.of(context).cardColor,
                             borderRadius: BorderRadius.circular(20),
-                            border: Border.all(color: Colors.grey.shade300),
+                            border: Border.all(color: Theme.of(context).colorScheme.outlineVariant),
                           ),
                           child: ValueListenableBuilder<ThemeMode>(
                             valueListenable: themeNotifier,
@@ -1015,13 +1020,13 @@ class _HomeScreenState extends State<HomeScreen> {
                                   Container(
                                     padding: EdgeInsets.all(10),
                                     decoration: BoxDecoration(
-                                      color: Color(0xff84d6fe)
+                                      color: brandBlue
                                           .withValues(alpha: 0.18),
                                       borderRadius: BorderRadius.circular(14),
                                     ),
                                     child: Icon(
                                       Icons.dark_mode_outlined,
-                                      color: Color(0xff2b88b4),
+                                      color: brandBlueDark,
                                     ),
                                   ),
                                   SizedBox(width: 12),
@@ -1041,7 +1046,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                         Text(
                                           "Switch between light and dark mode",
                                           style: TextStyle(
-                                            color: Colors.grey,
+                                            color: Theme.of(context).colorScheme.onSurfaceVariant,
                                             fontSize: 13,
                                           ),
                                         ),
@@ -1093,8 +1098,19 @@ class _HomeScreenState extends State<HomeScreen> {
       child: Scaffold(
         appBar: AppBar(
           automaticallyImplyLeading: false,
+            leading: IconButton(
+            key: const ValueKey('home-calendar-shortcut'),
+            tooltip: "Academic calendar",
+            icon: const Icon(Icons.calendar_month_outlined, color: brandBlueDark),
+            onPressed: () => Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (_) => CalendarScreen(isOrganizer: _isOrganizer),
+              ),
+            ),
+          ),
           actions: const [NotificationBell()],
-          title: Image.asset('assets/opportunet1.png', height: 60),
+          title: const AppLogo(height: 60),
           centerTitle: true,
         ),
         body: SafeArea(
@@ -1109,21 +1125,98 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
           ),
         ),
-        bottomNavigationBar: BottomNavigationBar(
-          type: BottomNavigationBarType.fixed,
-          currentIndex: _selectedIndex,
-          onTap: _onItemTapped,
-          selectedItemColor: Theme.of(context).colorScheme.primary,
-          unselectedItemColor: Colors.grey,
-          items: [
-            BottomNavigationBarItem(icon: Icon(Icons.home), label: "Home"),
-            BottomNavigationBarItem(
-              icon: Icon(Icons.chat),
-              label: "Posts feed",
+        bottomNavigationBar: NavigationBar(
+          selectedIndex: _selectedIndex,
+          onDestinationSelected: _onItemTapped,
+          destinations: const [
+            NavigationDestination(
+              icon: Icon(Icons.home_outlined),
+              selectedIcon: Icon(Icons.home_rounded),
+              label: "Home",
             ),
-            BottomNavigationBarItem(icon: Icon(Icons.smart_toy), label: "AI"),
-            BottomNavigationBarItem(icon: Icon(Icons.person), label: "Profile"),
+            NavigationDestination(
+              icon: Icon(Icons.forum_outlined),
+              selectedIcon: Icon(Icons.forum_rounded),
+              label: "Community",
+            ),
+            NavigationDestination(
+              icon: Icon(Icons.auto_awesome_outlined),
+              selectedIcon: Icon(Icons.auto_awesome),
+              label: "Ask AI",
+            ),
+            NavigationDestination(
+              icon: Icon(Icons.person_outline_rounded),
+              selectedIcon: Icon(Icons.person_rounded),
+              label: "Profile",
+            ),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+class _AiEmptyState extends StatelessWidget {
+  const _AiEmptyState({required this.onPick});
+
+  final ValueChanged<String> onPick;
+
+  static const _questions = [
+    "Which summer programs should I apply to this year?",
+    "Which scholarships cover full tuition abroad?",
+    "How do I prepare for the SAT from Georgia?",
+  ];
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+
+    return Center(
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.all(24),
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 420),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(Icons.auto_awesome, size: 36, color: brandBlueDark),
+              const SizedBox(height: 10),
+              const Text(
+                "Ask about studying abroad",
+                textAlign: TextAlign.center,
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                "Deadlines, essays, scholarships, tests.",
+                textAlign: TextAlign.center,
+                style: TextStyle(color: colors.onSurfaceVariant),
+              ),
+              const SizedBox(height: 18),
+              for (final question in _questions)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 8),
+                  child: SizedBox(
+                    width: double.infinity,
+                    child: OutlinedButton(
+                      onPressed: () => onPick(question),
+                      style: OutlinedButton.styleFrom(
+                        alignment: Alignment.centerLeft,
+                        minimumSize: const Size(48, 48),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 14,
+                          vertical: 12,
+                        ),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(14),
+                        ),
+                      ),
+                      child: Text(question),
+                    ),
+                  ),
+                ),
+            ],
+          ),
         ),
       ),
     );

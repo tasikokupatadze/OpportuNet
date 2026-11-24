@@ -152,7 +152,7 @@ class _OlympScreenState extends State<OlympScreen> {
                                       : Container(
                                           height: 80,
                                           width: 80,
-                                          color: Colors.grey.shade300,
+                                          color: Theme.of(context).colorScheme.surfaceContainerHighest,
                                           child: Icon(Icons.image),
                                         ),
                                 ),

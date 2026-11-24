@@ -2,6 +2,9 @@ import 'package:material_ui/material_ui.dart';
 
 const brandBlue = Color(0xff84d6fe);
 const brandInk = Color(0xff17394e);
+// Icon/accent blue. Use brandInk or colorScheme roles for text: brandBlue is too
+// light to read as text on white.
+const brandBlueDark = Color(0xff2b88b4);
 
 ThemeData appTheme(Brightness brightness) {
   final dark = brightness == Brightness.dark;
@@ -80,5 +83,17 @@ class LoadError extends StatelessWidget {
             ],
           ),
         ),
+      );
+}
+
+class AppLogo extends StatelessWidget {
+  final double height;
+  const AppLogo({super.key, this.height = 55});
+  @override
+  Widget build(BuildContext context) => Image.asset(
+        'assets/opportunet1.png',
+        height: height,
+        fit: BoxFit.contain,
+        semanticLabel: 'OpportuNet',
       );
 }

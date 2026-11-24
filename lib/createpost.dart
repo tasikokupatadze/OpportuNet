@@ -191,7 +191,7 @@ class _CreatePostState extends State<CreatePost> {
                                   .colorScheme
                                   .surfaceContainerHighest,
                               borderRadius: BorderRadius.circular(16),
-                              border: Border.all(color: Colors.grey.shade300),
+                              border: Border.all(color: Theme.of(context).colorScheme.outlineVariant),
                             ),
                             child: TextField(
                               controller: controller,

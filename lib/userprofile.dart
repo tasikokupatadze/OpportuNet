@@ -212,7 +212,7 @@ class UserProfile extends StatelessWidget {
       decoration: BoxDecoration(
         color: Theme.of(context).colorScheme.surface,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: Color(0xffdbeaf2)),
+        border: Border.all(color: Theme.of(context).colorScheme.outlineVariant),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -226,7 +226,7 @@ class UserProfile extends StatelessWidget {
             child: Icon(icon, color: Color(0xff2b88b4), size: 20),
           ),
           SizedBox(height: 12),
-          Text(title, style: TextStyle(fontSize: 13, color: Colors.grey)),
+          Text(title, style: TextStyle(fontSize: 13, color: Theme.of(context).colorScheme.onSurfaceVariant)),
           SizedBox(height: 4),
           Text(
             value,
@@ -253,7 +253,7 @@ class UserProfile extends StatelessWidget {
       decoration: BoxDecoration(
         color: Theme.of(context).colorScheme.surface,
         borderRadius: BorderRadius.circular(22),
-        border: Border.all(color: Color(0xffdbeaf2)),
+        border: Border.all(color: Theme.of(context).colorScheme.outlineVariant),
         boxShadow: [
           BoxShadow(
             color:
@@ -297,7 +297,7 @@ class UserProfile extends StatelessWidget {
           width: 72,
           child: Text(
             label,
-            style: TextStyle(fontSize: 14, color: Colors.grey),
+            style: TextStyle(fontSize: 14, color: Theme.of(context).colorScheme.onSurfaceVariant),
           ),
         ),
         Expanded(

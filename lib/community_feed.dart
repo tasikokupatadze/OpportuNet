@@ -8,11 +8,8 @@ import 'userprofile.dart';
 import 'commentssheet.dart';
 import 'createpost.dart';
 
-const kAccent = Color(0xff84d6fe);
-const kAccentDark = Color(0xff2a9fd8);
-const kBg = Color(0xfff4f9fc);
-const kBorder = Color(0xffdbeaf2);
-const kInk = Color(0xff13202b);
+const kAccent = brandBlue;
+const kAccentDark = brandBlueDark;
 
 class FeedCategory {
   final String name;

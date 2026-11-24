@@ -43,7 +43,7 @@ class _SavedPostsScreenState extends State<SavedPostsScreen> {
 
   @override
   Widget build(BuildContext context) => Scaffold(
-        appBar: AppBar(title: const Text('Saved posts')),
+        appBar: AppBar(centerTitle: true, title: const AppLogo()),
         body: ContentWidth(
           maxWidth: 760,
           child: StreamBuilder<QuerySnapshot>(

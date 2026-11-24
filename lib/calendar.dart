@@ -2,6 +2,10 @@ import 'package:material_ui/material_ui.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:table_calendar/table_calendar.dart';
+// table_calendar's header buttons are flutter/material InkWells, which only see a
+// flutter/material Material ancestor, not material_ui's.
+import 'package:flutter/material.dart' as flutter_material
+    show Material, MaterialType;
 
 import 'app_ui.dart';
 
@@ -244,7 +248,9 @@ class _CalendarScreenState extends State<CalendarScreen> {
                         margin: const EdgeInsets.all(12),
                         child: Padding(
                           padding: const EdgeInsets.all(10),
-                          child: TableCalendar<CalendarEvent>(
+                          child: flutter_material.Material(
+                            type: flutter_material.MaterialType.transparency,
+                            child: TableCalendar<CalendarEvent>(
                             firstDay: DateTime.utc(2020, 1, 1),
                             lastDay: DateTime.utc(2035, 12, 31),
                             focusedDay: _focusedDay,
@@ -295,6 +301,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
                               _focusedDay = focused;
                             }),
                             onPageChanged: (focused) => _focusedDay = focused,
+                          ),
                           ),
                         ),
                       ),

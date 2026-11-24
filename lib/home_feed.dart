@@ -5,7 +5,6 @@ import 'package:material_ui/material_ui.dart';
 
 import 'activitydetails.dart';
 import 'app_ui.dart';
-import 'calendar.dart';
 import 'extracurriculars.dart';
 import 'roadmaps.dart';
 import 'schools.dart';
@@ -35,8 +34,8 @@ const Map<String, IconData> kSubjectIcons = {
   "economics": Icons.trending_up_rounded,
 };
 
-const Color _brand = Color(0xff84d6fe);
-const Color _brandDark = Color(0xff2b88b4);
+const Color _brand = brandBlue;
+const Color _brandDark = brandBlueDark;
 
 enum CostFilter { any, free, paid }
 enum SortBy { newest, deadline, title, cheapest }
@@ -188,7 +187,7 @@ class _HomeFeedState extends State<HomeFeed> {
 
   String _query = "";
   CostFilter _cost = CostFilter.any;
-  SortBy _sort = SortBy.newest;
+  SortBy _sort = SortBy.deadline;
   FeedLayout _layout = FeedLayout.grid;
   int? _myAge;
 
@@ -197,7 +196,7 @@ class _HomeFeedState extends State<HomeFeed> {
       _subjects.isNotEmpty ||
       _cost != CostFilter.any ||
       _myAge != null ||
-      _sort != SortBy.newest;
+      _sort != SortBy.deadline;
 
   @override
   void dispose() {
@@ -280,10 +279,9 @@ class _HomeFeedState extends State<HomeFeed> {
         break;
 
       case SortBy.deadline:
-        final now = DateTime.now();
         DateTime? upcoming(Map<String, dynamic> data) {
           final date = _deadline(data) ?? _date(data["date"]);
-          return date != null && date.isAfter(now) ? date : null;
+          return date != null && daysUntil(date) >= 0 ? date : null;
         }
 
         items.sort((a, b) {
@@ -303,7 +301,7 @@ class _HomeFeedState extends State<HomeFeed> {
       _categories.clear();
       _subjects.clear();
       _cost = CostFilter.any;
-      _sort = SortBy.newest;
+      _sort = SortBy.deadline;
       _myAge = null;
       _query = "";
       _searchCtrl.clear();
@@ -325,6 +323,7 @@ class _HomeFeedState extends State<HomeFeed> {
             keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
             slivers: [
               SliverToBoxAdapter(child: _searchRow()),
+              SliverToBoxAdapter(child: _shortcuts()),
               SliverToBoxAdapter(child: _categoryChips()),
               SliverPadding(
                 padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -421,6 +420,56 @@ class _HomeFeedState extends State<HomeFeed> {
     );
   }
 
+  Widget _shortcuts() {
+    final colors = Theme.of(context).colorScheme;
+
+    Widget tile(Key key, String label, IconData icon, WidgetBuilder page) {
+      return Expanded(
+        child: Material(
+          key: key,
+          color: colors.surfaceContainerHighest,
+          borderRadius: BorderRadius.circular(14),
+          child: InkWell(
+            borderRadius: BorderRadius.circular(14),
+            onTap: () =>
+                Navigator.push(context, MaterialPageRoute(builder: page)),
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(minHeight: 48),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                child: Row(
+                  children: [
+                    Icon(icon, size: 20, color: _brandDark),
+                    const SizedBox(width: 8),
+                    Flexible(
+                      child: Text(
+                        label,
+                        style: const TextStyle(fontWeight: FontWeight.w600),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+    }
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 4, 16, 2),
+      child: Row(
+        children: [
+          tile(const ValueKey('home-roadmaps-shortcut'), "Roadmaps",
+              Icons.route_rounded, (_) => const RoadmapScreen()),
+          const SizedBox(width: 8),
+          tile(const ValueKey('home-schools-shortcut'), "Schools in Georgia",
+              Icons.school_rounded, (_) => const SchoolScreen()),
+        ],
+      ),
+    );
+  }
+
   Widget _categoryChips() {
     final scale = MediaQuery.textScalerOf(context).scale(14) / 14;
     final height = 48.0 + (scale > 1 ? (scale - 1) * 20 : 0);
@@ -497,29 +546,6 @@ class _HomeFeedState extends State<HomeFeed> {
               MaterialPageRoute(builder: (_) => const AddActivityScreen()),
             ),
           ),
-        PopupMenuButton<WidgetBuilder>(
-          tooltip: "Resources",
-          icon: const Icon(Icons.menu_book_outlined, size: 21),
-          onSelected: (page) {
-            Navigator.push(context, MaterialPageRoute(builder: page));
-          },
-          itemBuilder: (_) => [
-            PopupMenuItem<WidgetBuilder>(
-              key: const ValueKey('home-schools-shortcut'),
-              value: (_) => const SchoolScreen(),
-              child: const Text("Best Schools in Georgia"),
-            ),
-            PopupMenuItem<WidgetBuilder>(
-              value: (_) => const RoadmapScreen(),
-              child: const Text("Roadmaps"),
-            ),
-            PopupMenuItem<WidgetBuilder>(
-              key: const ValueKey('home-calendar-shortcut'),
-              value: (_) => CalendarScreen(isOrganizer: widget.isOrganizer),
-              child: const Text("Academic Calendar"),
-            ),
-          ],
-        ),
         PopupMenuButton<SortBy>(
           tooltip: "Sort opportunities",
           initialValue: _sort,
@@ -785,6 +811,7 @@ class OpportunityCard extends StatelessWidget {
     final duration = _duration(data);
     final section = _str(data, [kCategoryField]);
     final deadline = _deadline(data);
+    final closed = deadline != null && daysUntil(deadline) < 0;
 
     final tags = <(IconData, String)>[
       if (section == "olympiads" && subject.isNotEmpty)
@@ -861,7 +888,9 @@ class OpportunityCard extends StatelessWidget {
                             fontSize: 16,
                             fontWeight: FontWeight.w700,
                             height: 1.25,
-                            color: colors.onSurface,
+                            color: closed
+                                ? colors.onSurfaceVariant
+                                : colors.onSurface,
                           ),
                         ),
                       ],
@@ -877,14 +906,7 @@ class OpportunityCard extends StatelessWidget {
               ),
               if (deadline != null) ...[
                 const SizedBox(height: 10),
-                Text(
-                  "Deadline · ${MaterialLocalizations.of(context).formatMediumDate(deadline)}",
-                  style: TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w600,
-                    color: colors.onSurface,
-                  ),
-                ),
+                _DeadlineLabel(deadline: deadline),
               ],
               const SizedBox(height: 10),
               Wrap(
@@ -923,6 +945,51 @@ class OpportunityCard extends StatelessWidget {
             ],
           ),
         ),
+      ),
+    );
+  }
+}
+
+// Whole calendar days until [deadline]; negative once it has passed.
+int daysUntil(DateTime deadline, {DateTime? now}) {
+  now ??= DateTime.now();
+  // UTC dates so a daylight-saving change can't make a day 23 hours long.
+  final today = DateTime.utc(now.year, now.month, now.day);
+  final day = DateTime.utc(deadline.year, deadline.month, deadline.day);
+  return day.difference(today).inDays;
+}
+
+class _DeadlineLabel extends StatelessWidget {
+  final DateTime deadline;
+  const _DeadlineLabel({required this.deadline});
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+    final days = daysUntil(deadline);
+    final date = MaterialLocalizations.of(context).formatMediumDate(deadline);
+
+    final (String text, Color bg, Color fg) = switch (days) {
+      < 0 => ("Closed · $date", colors.surfaceContainerHighest,
+          colors.onSurfaceVariant),
+      0 => ("Closes today", colors.errorContainer, colors.onErrorContainer),
+      1 => ("Closes tomorrow", colors.errorContainer, colors.onErrorContainer),
+      <= 14 => ("Closes in $days days · $date", colors.errorContainer,
+          colors.onErrorContainer),
+      _ => ("Deadline · $date", Colors.transparent, colors.onSurface),
+    };
+
+    return Container(
+      padding: bg == Colors.transparent
+          ? EdgeInsets.zero
+          : const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      decoration: BoxDecoration(
+        color: bg,
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Text(
+        text,
+        style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600, color: fg),
       ),
     );
   }

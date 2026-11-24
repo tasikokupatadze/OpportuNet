@@ -2,6 +2,7 @@ import 'package:material_ui/material_ui.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'login.dart';
 import 'main.dart';
+import 'app_ui.dart';
 
 class AuthGate extends StatelessWidget {
   const AuthGate({super.key});
@@ -14,7 +15,14 @@ class AuthGate extends StatelessWidget {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const Scaffold(
             body: Center(
-              child: CircularProgressIndicator(),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  AppLogo(height: 80),
+                  SizedBox(height: 20),
+                  CircularProgressIndicator(),
+                ],
+              ),
             ),
           );
         }
