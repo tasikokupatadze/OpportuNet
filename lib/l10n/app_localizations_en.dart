@@ -1105,4 +1105,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String sourceError(String error) {
     return 'Last check failed: $error';
   }
+
+  @override
+  String get share => 'Share';
+
+  @override
+  String shareFoundOn(String url) {
+    return 'Found on OpportuNet: $url';
+  }
 }

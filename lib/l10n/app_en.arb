@@ -357,5 +357,10 @@
   "sourceError": "Last check failed: {error}",
   "@sourceError": {
     "placeholders": {"error": {"type": "String"}}
+  },
+  "share": "Share",
+  "shareFoundOn": "Found on OpportuNet: {url}",
+  "@shareFoundOn": {
+    "placeholders": {"url": {"type": "String"}}
   }
 }

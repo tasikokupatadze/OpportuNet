@@ -1105,4 +1105,12 @@ class AppLocalizationsKa extends AppLocalizations {
   String sourceError(String error) {
     return 'ბოლო შემოწმება ვერ მოხერხდა: $error';
   }
+
+  @override
+  String get share => 'გაზიარება';
+
+  @override
+  String shareFoundOn(String url) {
+    return 'ნაპოვნია OpportuNet-ში: $url';
+  }
 }

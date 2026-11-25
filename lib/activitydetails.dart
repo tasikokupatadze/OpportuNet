@@ -3,7 +3,18 @@ import 'opportunity_stats.dart';
 import 'saved_opportunities.dart';
 
 import 'package:material_ui/material_ui.dart';
+import 'package:share_plus/share_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
+
+const kPlayStoreUrl =
+    'https://play.google.com/store/apps/details?id=com.opportunet.app';
+
+/// The text sent when a student shares an opportunity: title, its website
+/// (when it has one) and a line pointing to the app.
+String opportunityShareText(String title, String website, String appLine) =>
+    [title.trim(), website.trim(), appLine]
+        .where((line) => line.isNotEmpty)
+        .join('\n');
 
 class ActivityDetailsScreen extends StatelessWidget {
   final Map<String, dynamic> activity;
@@ -15,6 +26,21 @@ class ActivityDetailsScreen extends StatelessWidget {
 
     if (await canLaunchUrl(url)) {
       await launchUrl(url, mode: LaunchMode.externalApplication);
+    }
+  }
+
+  Future<void> _share(BuildContext context, String title, String website) async {
+    final box = context.findRenderObject() as RenderBox?;
+    final text = opportunityShareText(
+        title, website, context.l10n.shareFoundOn(kPlayStoreUrl));
+    final result = await SharePlus.instance.share(ShareParams(
+      text: text,
+      subject: title,
+      sharePositionOrigin:
+          box == null ? null : box.localToGlobal(Offset.zero) & box.size,
+    ));
+    if (result.status != ShareResultStatus.dismissed) {
+      logOpportunityEvent(activity, StatEvent.share);
     }
   }
 
@@ -36,7 +62,16 @@ class ActivityDetailsScreen extends StatelessWidget {
       appBar: AppBar(
         title: Image.asset('assets/opportunet1.png', height: 60),
         centerTitle: true,
-        actions: [SaveOpportunityButton(data: activity)],
+        actions: [
+          Builder(
+            builder: (buttonContext) => IconButton(
+              tooltip: context.l10n.share,
+              icon: Icon(Icons.share_outlined),
+              onPressed: () => _share(buttonContext, title, website),
+            ),
+          ),
+          SaveOpportunityButton(data: activity),
+        ],
       ),
       body: SafeArea(
         top: false,

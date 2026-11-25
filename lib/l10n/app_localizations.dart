@@ -2119,6 +2119,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Last check failed: {error}'**
   String sourceError(String error);
+
+  /// No description provided for @share.
+  ///
+  /// In en, this message translates to:
+  /// **'Share'**
+  String get share;
+
+  /// No description provided for @shareFoundOn.
+  ///
+  /// In en, this message translates to:
+  /// **'Found on OpportuNet: {url}'**
+  String shareFoundOn(String url);
 }
 
 class _AppLocalizationsDelegate
