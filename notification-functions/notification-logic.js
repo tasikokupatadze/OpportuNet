@@ -5,6 +5,49 @@ function compactText(value, limit) {
   return Array.from(value.replace(/\s+/gu, ' ').trim()).slice(0, limit).join('');
 }
 
+const CALENDAR_FALLBACK = 'A new event was added to the calendar.';
+
+/** Language a device's pushes are sent in; English unless it says 'ka'. */
+function langOf(value) {
+  return value === 'ka' ? 'ka' : 'en';
+}
+
+/**
+ * Push title and body in the device's language. The stored notification
+ * (and the in-app feed) stays English; user text such as an event title
+ * is sent as written.
+ */
+function pushText(notification, lang) {
+  const english = { title: notification.title, body: notification.body };
+  if (langOf(lang) !== 'ka') return english;
+  if (notification.type === 'post') {
+    const name = compactText(notification.actorName, 60);
+    return {
+      title: 'ახალი პოსტი საზოგადოებაში',
+      body: name ? `ავტორი: ${name}` : 'საზოგადოებაში ახალი პოსტი გამოქვეყნდა.',
+    };
+  }
+  if (notification.type === 'calendar') {
+    return {
+      title: 'ახალი მოვლენა აკადემიურ კალენდარში',
+      body: notification.body === CALENDAR_FALLBACK || !notification.body
+        ? 'კალენდარს ახალი მოვლენა დაემატა.' : notification.body,
+    };
+  }
+  return english;
+}
+
+/** Splits send candidates into one list per language. */
+function groupByLang(candidates) {
+  const groups = new Map();
+  for (const candidate of candidates) {
+    const lang = langOf(candidate.lang);
+    if (!groups.has(lang)) groups.set(lang, []);
+    groups.get(lang).push(candidate);
+  }
+  return groups;
+}
+
 function sourceNotification(type, targetId, data) {
   if (!data || !['post', 'calendar'].includes(type) || typeof targetId !== 'string' || !targetId) {
     return null;
@@ -12,9 +55,10 @@ function sourceNotification(type, targetId, data) {
   const actorId = type === 'post' ? data.userId : data.createdBy;
   if (typeof actorId !== 'string' || !actorId) return null;
   if (type === 'post') {
-    const username = compactText(data.username, 60) || 'A community member';
+    const actorName = compactText(data.username, 60);
+    const username = actorName || 'A community member';
     return {
-      type, targetId, actorId,
+      type, targetId, actorId, actorName,
       title: 'New community post',
       body: `${username} shared a new post.`,
       eventDate: '',
@@ -23,7 +67,7 @@ function sourceNotification(type, targetId, data) {
   return {
     type, targetId, actorId,
     title: 'New academic calendar event',
-    body: compactText(data.title, 160) || 'A new event was added to the calendar.',
+    body: compactText(data.title, 160) || CALENDAR_FALLBACK,
     eventDate: typeof data.date === 'string' && data.date.length <= 64 &&
       /^\d{4}-\d{2}-\d{2}/u.test(data.date) && Number.isFinite(Date.parse(data.date))
         ? data.date : '',
@@ -54,7 +98,7 @@ function appLink(appUrl, data) {
   return url.toString();
 }
 
-function messageFor(notificationId, notification, appUrl = '') {
+function messageFor(notificationId, notification, appUrl = '', lang = 'en') {
   if (!['post', 'calendar'].includes(notification?.type) ||
       typeof notification.targetId !== 'string' || !notification.targetId) {
     throw new Error('Invalid notification payload');
@@ -66,10 +110,11 @@ function messageFor(notificationId, notification, appUrl = '') {
     eventDate: typeof notification.eventDate === 'string' ? notification.eventDate : '',
   };
   const link = appLink(appUrl, data);
+  const text = pushText(notification, lang);
   return {
     notification: {
-      title: compactText(notification.title, 120),
-      body: compactText(notification.body, 160),
+      title: compactText(text.title, 120),
+      body: compactText(text.body, 160),
     },
     data,
     android: {
@@ -91,7 +136,7 @@ function deviceCandidate(path, data, actorId) {
   const pieces = path.split('/');
   if (pieces.length !== 4 || pieces[0] !== 'users' || pieces[2] !== 'notificationDevices' ||
       pieces[1] === actorId || typeof data?.token !== 'string' || !data.token.trim()) return null;
-  return { uid: pieces[1], token: data.token, path };
+  return { uid: pieces[1], token: data.token, path, lang: langOf(data.lang) };
 }
 
 function invalidRegistration(code) {
@@ -106,4 +151,5 @@ function leaseState(data, nowMillis) {
 }
 
 module.exports = { compactText, sourceNotification, stableNotificationId, isAlreadyExists,
-  appLink, messageFor, deviceCandidate, invalidRegistration, leaseState };
+  appLink, messageFor, deviceCandidate, invalidRegistration, leaseState,
+  langOf, pushText, groupByLang };

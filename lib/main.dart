@@ -78,6 +78,11 @@ class MyApp extends StatelessWidget {
           localizationsDelegates: AppLocalizations.localizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
           home: const AuthGate(),
+          builder: (context, child) {
+            // Push texts are sent in this language (see notification-functions).
+            NotificationService.instance.setLanguage(context.appLanguageCode);
+            return child!;
+          },
         );
       },
     );

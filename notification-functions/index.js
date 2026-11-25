@@ -7,7 +7,7 @@ const { onDocumentCreated } = require('firebase-functions/v2/firestore');
 const { defineString } = require('firebase-functions/params');
 const logger = require('firebase-functions/logger');
 const { sourceNotification, stableNotificationId, isAlreadyExists, messageFor,
-  deviceCandidate, invalidRegistration, leaseState } = require('./notification-logic');
+  deviceCandidate, invalidRegistration, leaseState, groupByLang } = require('./notification-logic');
 
 initializeApp();
 const db = getFirestore();
@@ -57,7 +57,8 @@ exports.deliverNotificationPush = onDocumentCreated({
   if (!event.data) return;
   const id = event.params.notificationId;
   const notification = event.data.data();
-  const baseMessage = messageFor(id, notification, APP_URL.value());
+  // Validates the payload and APP_URL before taking the delivery lease.
+  messageFor(id, notification, APP_URL.value());
   const stateRef = db.collection('_notificationDelivery').doc(id);
   const owner = randomUUID();
   const now = Date.now();
@@ -97,10 +98,11 @@ exports.deliverNotificationPush = onDocumentCreated({
           else unique.set(candidate.token, { ...candidate, refs: [doc.ref] });
         }
       }
-      const candidates = [...unique.values()];
-      if (candidates.length) {
+      // One send per language: Georgian devices get the Georgian texts.
+      for (const [lang, candidates] of groupByLang([...unique.values()])) {
         const result = await getMessaging().sendEachForMulticast({
-          ...baseMessage, tokens: candidates.map((device) => device.token),
+          ...messageFor(id, notification, APP_URL.value(), lang),
+          tokens: candidates.map((device) => device.token),
         });
         const cleanup = [];
         let retryNeeded = false;

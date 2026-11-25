@@ -41,7 +41,31 @@ class NotificationService extends ChangeNotifier {
   Map<String, dynamic>? _pendingOpen;
   String? _lastOpenedMessage;
 
+  String _lang = 'en';
+
   bool get enabled => _enabled;
+
+  /// Records the app language ('en' or 'ka') on this device's registration
+  /// so pushes arrive in it. Safe to call on every build.
+  void setLanguage(String code) {
+    final lang = code == 'ka' ? 'ka' : 'en';
+    if (lang == _lang) return;
+    _lang = lang;
+    final uid = _uid;
+    if (uid == null || !_enabled) return;
+    unawaited(_deviceMutations.run(() async {
+      final prefs = await SharedPreferences.getInstance();
+      for (final token in _knownTokens(uid, prefs).toList()) {
+        await _deviceRef(uid, token).update({
+          'lang': lang,
+          'updatedAt': FieldValue.serverTimestamp(),
+        });
+      }
+    }).catchError((Object error) {
+      // The next registration (app start or token refresh) writes it again.
+      debugPrint('Push language update pending: ${error.runtimeType}');
+    }));
+  }
   bool get busy => _busy;
   String? get error => _error;
 
@@ -254,6 +278,7 @@ class NotificationService extends ChangeNotifier {
         await _deviceRef(uid, token).set({
           'token': token,
           'platform': kIsWeb ? 'web' : defaultTargetPlatform.name,
+          'lang': _lang,
           'updatedAt': FieldValue.serverTimestamp(),
         });
         for (final old in tokens.where((value) => value != token).toList()) {

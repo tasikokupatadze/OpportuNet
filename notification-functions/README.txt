@@ -55,7 +55,7 @@ FIREBASE SETUP
 CLIENT SETUP
 The Flutter notification service must request notification permission from a user action, then save the FCM token to:
   users/<uid>/notificationDevices/<deviceId>
-with token, platform (web/android/ios), and updatedAt: serverTimestamp(). Delete the previous user's device registration before signing out or switching accounts. Never put service-account credentials, FCM server keys, or Admin SDK code in Flutter or the web service worker.
+with token, platform (web/android/ios), optional lang (en/ka; pushes use Georgian texts for ka, English otherwise), and updatedAt: serverTimestamp(). Delete the previous user's device registration before signing out or switching accounts. Never put service-account credentials, FCM server keys, or Admin SDK code in Flutter or the web service worker.
 
 Android uses the FCM fallback notification channel; no custom channel needs to be created for this package. Keep the existing Firebase Android/Google Services setup. Android 13+ needs POST_NOTIFICATIONS in AndroidManifest.xml and an explicit runtime permission prompt. You can add a custom channel/icon later with matching native setup. Web requires HTTPS (or localhost for development), a Firebase messaging service worker, and the project's public VAPID key. Browser/OS settings determine whether delivery works while the browser is fully closed; do not assume every browser/phone behaves the same. iOS additionally requires APNs configuration in Firebase and Apple push entitlements.
 

@@ -48,12 +48,14 @@ service cloud.firestore {
     match /users/{uid}/notificationDevices/{deviceId} {
       allow read, delete: if request.auth != null && request.auth.uid == uid;
       allow create, update: if request.auth != null && request.auth.uid == uid
-        && request.resource.data.keys().hasOnly(['token', 'platform', 'updatedAt'])
+        && request.resource.data.keys().hasOnly(['token', 'platform', 'updatedAt', 'lang'])
         && request.resource.data.keys().hasAll(['token', 'platform', 'updatedAt'])
         && request.resource.data.token is string
         && request.resource.data.token.size() > 0
         && request.resource.data.token.size() <= 4096
         && request.resource.data.platform in ['web', 'android', 'ios']
+        && (!('lang' in request.resource.data)
+          || request.resource.data.lang in ['en', 'ka'])
         && request.resource.data.updatedAt == request.time;
     }
 
