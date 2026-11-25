@@ -25,3 +25,6 @@ android/app/google-services.json
 .metadata
 # Generated per machine by Flutter
 **/Flutter/ephemeral/
+
+# Node dependencies (installed by npm ci, never committed)
+node_modules/
