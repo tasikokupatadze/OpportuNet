@@ -322,6 +322,8 @@ class _SignUpScreenState extends State<SignUpScreen> {
                               }
 
                               setState(() => _isSigningUp = true);
+                              // Errors after this is set mean the account exists but setup didn't finish.
+                              var accountCreated = false;
                               try {
                                 await FirebaseAuth.instance
                                     .setLanguageCode(context.appLanguageCode);
@@ -334,6 +336,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
                                   password: pswrdctrl.text,
                                 );
 
+                                accountCreated = true;
                                 final user = userCredential.user!;
 
                                 await FirebaseFirestore.instance
@@ -383,7 +386,9 @@ class _SignUpScreenState extends State<SignUpScreen> {
                                 String message =
                                     context.l10n.registrationFailed;
 
-                                if (e.code == 'email-already-in-use') {
+                                if (accountCreated) {
+                                  message = context.l10n.accountPartlyCreated;
+                                } else if (e.code == 'email-already-in-use') {
                                   message = context.l10n.emailInUse;
                                 } else if (e.code == 'weak-password') {
                                   message = context.l10n.strongerPassword;
@@ -402,7 +407,9 @@ class _SignUpScreenState extends State<SignUpScreen> {
                                 ScaffoldMessenger.of(context).showSnackBar(
                                   SnackBar(
                                     content: Text(
-                                      context.l10n.accountPartlyCreated,
+                                      accountCreated
+                                          ? context.l10n.accountPartlyCreated
+                                          : context.l10n.registrationFailed,
                                     ),
                                   ),
                                 );
