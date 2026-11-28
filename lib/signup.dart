@@ -327,6 +327,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
                               }
 
                               setState(() => _isSigningUp = true);
+                              var accountCreated = false;
                               try {
                                 await FirebaseAuth.instance.setLanguageCode(
                                     context.appLanguageCode);
@@ -338,6 +339,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
                                   email: email,
                                   password: pswrdctrl.text,
                                 );
+                                accountCreated = true;
 
                                 final user = userCredential.user!;
 
@@ -407,7 +409,9 @@ class _SignUpScreenState extends State<SignUpScreen> {
                                 ScaffoldMessenger.of(context).showSnackBar(
                                   SnackBar(
                                     content: Text(
-                                      context.l10n.accountPartlyCreated,
+                                      accountCreated
+                                          ? context.l10n.accountPartlyCreated
+                                          : context.l10n.registrationFailed,
                                     ),
                                   ),
                                 );
