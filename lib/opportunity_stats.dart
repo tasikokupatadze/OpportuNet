@@ -115,8 +115,8 @@ class _OpportunityStatsScreenState extends State<OpportunityStatsScreen> {
               return const Center(child: CircularProgressIndicator());
             }
 
-            final fromDay = tbilisiDay(
-                DateTime.now().subtract(Duration(days: _range - 1)));
+            final fromDay =
+                tbilisiDay(DateTime.now().subtract(Duration(days: _range - 1)));
             final rows = [
               for (final doc in snap.data!.docs)
                 (
@@ -156,7 +156,8 @@ class _OpportunityStatsScreenState extends State<OpportunityStatsScreen> {
               children: [
                 SegmentedButton<int>(
                   segments: [
-                    ButtonSegment(value: 7, label: Text(context.l10n.last7Days)),
+                    ButtonSegment(
+                        value: 7, label: Text(context.l10n.last7Days)),
                     ButtonSegment(
                         value: 30, label: Text(context.l10n.last30Days)),
                   ],
@@ -202,8 +203,7 @@ class _OpportunityStatsScreenState extends State<OpportunityStatsScreen> {
                 Text(context.l10n.statsUpdatedDaily,
                     style: TextStyle(
                         fontSize: 12,
-                        color:
-                            Theme.of(context).colorScheme.onSurfaceVariant)),
+                        color: Theme.of(context).colorScheme.onSurfaceVariant)),
               ],
             );
           },

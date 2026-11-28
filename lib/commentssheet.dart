@@ -68,7 +68,8 @@ class _CommentsSheetState extends State<CommentsSheet> {
                   _expandedComments.add(id);
                 }
               }),
-              child: Text(expanded ? context.l10n.seeLess : context.l10n.seeMore),
+              child:
+                  Text(expanded ? context.l10n.seeLess : context.l10n.seeMore),
             ),
           ],
         );
@@ -153,8 +154,8 @@ class _CommentsSheetState extends State<CommentsSheet> {
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context)
-            .showSnackBar(SnackBar(content: Text(context.l10n.commentAddFailed)));
+        ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(context.l10n.commentAddFailed)));
       }
     } finally {
       if (mounted) setState(() => _isSending = false);
@@ -230,7 +231,8 @@ class _CommentsSheetState extends State<CommentsSheet> {
             ),
             TextButton(
               onPressed: () => Navigator.pop(dialogContext, true),
-              child: Text(context.l10n.delete, style: TextStyle(color: Colors.red)),
+              child: Text(context.l10n.delete,
+                  style: TextStyle(color: Colors.red)),
             ),
           ],
         );
@@ -259,7 +261,8 @@ class _CommentsSheetState extends State<CommentsSheet> {
       if (mounted) {
         ScaffoldMessenger.of(
           context,
-        ).showSnackBar(SnackBar(content: Text(context.l10n.commentDeleteFailed)));
+        ).showSnackBar(
+            SnackBar(content: Text(context.l10n.commentDeleteFailed)));
       }
     }
   }
@@ -290,7 +293,8 @@ class _CommentsSheetState extends State<CommentsSheet> {
                       .snapshots(),
                   builder: (context, snapshot) {
                     if (snapshot.hasError) {
-                      return Center(child: Text(context.l10n.loadCommentsFailed));
+                      return Center(
+                          child: Text(context.l10n.loadCommentsFailed));
                     }
 
                     if (snapshot.connectionState == ConnectionState.waiting) {
@@ -375,7 +379,7 @@ class _CommentsSheetState extends State<CommentsSheet> {
                               fullName.isEmpty ? context.l10n.user : fullName,
                               style: const TextStyle(
                                 fontWeight: FontWeight.bold,
-                                color: Color(0xff2b88b4),
+                                color: brandBlueDark,
                               ),
                             ),
                           ),

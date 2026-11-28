@@ -34,8 +34,9 @@ class _SavedPostsScreenState extends State<SavedPostsScreen> {
           .collection('users')
           .doc(widget.currentUserId)
           .get();
-      if (mounted)
-        {setState(() => _isOrganizer = doc.data()?['role'] == 'organizer');}
+      if (mounted) {
+        setState(() => _isOrganizer = doc.data()?['role'] == 'organizer');
+      }
     } catch (_) {
       // Role-specific actions stay hidden when the role cannot be loaded.
     }
@@ -55,11 +56,12 @@ class _SavedPostsScreenState extends State<SavedPostsScreen> {
                   onRetry: () => setState(_connect),
                 );
               }
-              if (!snapshot.hasData)
-                {return const Center(child: CircularProgressIndicator());}
+              if (!snapshot.hasData) {
+                return const Center(child: CircularProgressIndicator());
+              }
               final posts = snapshot.data!.docs;
-              if (posts.isEmpty)
-               { return Center(
+              if (posts.isEmpty) {
+                return Center(
                   child: Padding(
                     padding: EdgeInsets.all(24),
                     child: Text(
@@ -67,7 +69,8 @@ class _SavedPostsScreenState extends State<SavedPostsScreen> {
                       textAlign: TextAlign.center,
                     ),
                   ),
-                );}
+                );
+              }
               return ListView.builder(
                 padding: const EdgeInsets.all(14),
                 itemCount: posts.length,

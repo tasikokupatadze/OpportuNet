@@ -31,20 +31,23 @@ void main() {
 
   test('age fit, then interests, then soonest deadline', () {
     expect(
-      rank([
-        {'title': 'soonest', 'deadline': '2026-11-30'},
-        {
-          'title': 'maths',
-          'deadline': '2026-12-30',
-          'subjects': ['Maths'],
-        },
-        {
-          'title': 'too old',
-          'deadline': '2026-12-01',
-          'age': '18+',
-          'subjects': ['Maths'],
-        },
-      ], age: 15, interests: {'maths'}),
+      rank(
+          [
+            {'title': 'soonest', 'deadline': '2026-11-30'},
+            {
+              'title': 'maths',
+              'deadline': '2026-12-30',
+              'subjects': ['Maths'],
+            },
+            {
+              'title': 'too old',
+              'deadline': '2026-12-01',
+              'age': '18+',
+              'subjects': ['Maths'],
+            },
+          ],
+          age: 15,
+          interests: {'maths'}),
       ['maths', 'soonest', 'too old'],
     );
   });

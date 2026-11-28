@@ -66,6 +66,7 @@ class NotificationService extends ChangeNotifier {
       debugPrint('Push language update pending: ${error.runtimeType}');
     }));
   }
+
   bool get busy => _busy;
   String? get error => _error;
 
@@ -89,7 +90,6 @@ class NotificationService extends ChangeNotifier {
         action:
             SnackBarAction(label: 'View', onPressed: () => _queueOpen(message)),
       ));
-      
     });
     FirebaseMessaging.onMessageOpenedApp.listen(_queueOpen);
     _messaging.onTokenRefresh.listen((token) async {
@@ -416,7 +416,9 @@ class NotificationService extends ChangeNotifier {
     final context = notificationNavigatorKey.currentContext;
     if (FirebaseAuth.instance.currentUser == null ||
         context == null ||
-        _pendingOpen == null) {return;}
+        _pendingOpen == null) {
+      return;
+    }
     final data = _pendingOpen!;
     _pendingOpen = null;
     WidgetsBinding.instance.addPostFrameCallback((_) {

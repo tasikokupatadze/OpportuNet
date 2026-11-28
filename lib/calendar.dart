@@ -85,7 +85,8 @@ class _CalendarScreenState extends State<CalendarScreen> {
                     DropdownButtonFormField<String>(
                       initialValue: category,
                       isExpanded: true,
-                      decoration: InputDecoration(labelText: context.l10n.category),
+                      decoration:
+                          InputDecoration(labelText: context.l10n.category),
                       items: const ['Competitions', 'Tests', 'Decisions']
                           .map(
                             (value) => DropdownMenuItem(
@@ -153,8 +154,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
                           if (!dialogContext.mounted) return;
                           setDialog(() {
                             saving = false;
-                            error =
-                                context.l10n.addEventFailed;
+                            error = context.l10n.addEventFailed;
                           });
                         }
                       },
@@ -197,14 +197,14 @@ class _CalendarScreenState extends State<CalendarScreen> {
   @override
   Widget build(BuildContext context) => Scaffold(
         appBar: AppBar(
-  centerTitle: true,
-  title: Image.asset(
-    'assets/opportunet1.png',
-    height: 55,
-    fit: BoxFit.contain,
-    semanticLabel: 'OpportuNet',
-  ),
-),
+          centerTitle: true,
+          title: Image.asset(
+            'assets/opportunet1.png',
+            height: 55,
+            fit: BoxFit.contain,
+            semanticLabel: 'OpportuNet',
+          ),
+        ),
         floatingActionButton: widget.isOrganizer
             ? FloatingActionButton(
                 onPressed: _addEvent,
@@ -219,15 +219,15 @@ class _CalendarScreenState extends State<CalendarScreen> {
             child: StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
               stream: _stream,
               builder: (context, snapshot) {
-                if (snapshot.hasError)
-                  {
-                    return LoadError(
-                      message: context.l10n.loadCalendarFailed,
-                      onRetry: () => setState(_connect),
-                    );
-                  }
-                if (!snapshot.hasData)
-                  {return const Center(child: CircularProgressIndicator());}
+                if (snapshot.hasError) {
+                  return LoadError(
+                    message: context.l10n.loadCalendarFailed,
+                    onRetry: () => setState(_connect),
+                  );
+                }
+                if (!snapshot.hasData) {
+                  return const Center(child: CircularProgressIndicator());
+                }
                 final events = <DateTime, List<CalendarEvent>>{};
                 for (final doc in snapshot.data!.docs) {
                   final data = doc.data();
@@ -261,57 +261,59 @@ class _CalendarScreenState extends State<CalendarScreen> {
                           child: flutter_material.Material(
                             type: flutter_material.MaterialType.transparency,
                             child: TableCalendar<CalendarEvent>(
-                            firstDay: DateTime.utc(2020, 1, 1),
-                            lastDay: DateTime.utc(2035, 12, 31),
-                            focusedDay: _focusedDay,
-                            rowHeight: 52 * textScale,
-                            daysOfWeekHeight: 24 * textScale,
-                            selectedDayPredicate: (day) =>
-                                isSameDay(_selectedDay, day),
-                            eventLoader: eventsFor,
-                            startingDayOfWeek: StartingDayOfWeek.monday,
-                            calendarStyle: CalendarStyle(
-                              defaultTextStyle:
-                                  TextStyle(color: colors.onSurface),
-                              weekendTextStyle:
-                                  TextStyle(color: colors.onSurface),
-                              todayTextStyle: const TextStyle(color: brandInk),
-                              selectedTextStyle: const TextStyle(
-                                color: brandInk,
-                                fontWeight: FontWeight.bold,
+                              firstDay: DateTime.utc(2020, 1, 1),
+                              lastDay: DateTime.utc(2035, 12, 31),
+                              focusedDay: _focusedDay,
+                              rowHeight: 52 * textScale,
+                              daysOfWeekHeight: 24 * textScale,
+                              selectedDayPredicate: (day) =>
+                                  isSameDay(_selectedDay, day),
+                              eventLoader: eventsFor,
+                              startingDayOfWeek: StartingDayOfWeek.monday,
+                              calendarStyle: CalendarStyle(
+                                defaultTextStyle:
+                                    TextStyle(color: colors.onSurface),
+                                weekendTextStyle:
+                                    TextStyle(color: colors.onSurface),
+                                todayTextStyle:
+                                    const TextStyle(color: brandInk),
+                                selectedTextStyle: const TextStyle(
+                                  color: brandInk,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                                todayDecoration: BoxDecoration(
+                                  color: brandBlue.withValues(alpha: 0.75),
+                                  shape: BoxShape.circle,
+                                ),
+                                selectedDecoration: const BoxDecoration(
+                                  color: brandBlue,
+                                  shape: BoxShape.circle,
+                                ),
+                                markerDecoration: BoxDecoration(
+                                  color: colors.error,
+                                  shape: BoxShape.circle,
+                                ),
+                                outsideDaysVisible: false,
                               ),
-                              todayDecoration: BoxDecoration(
-                                color: brandBlue.withValues(alpha: 0.75),
-                                shape: BoxShape.circle,
+                              daysOfWeekStyle: DaysOfWeekStyle(
+                                weekdayStyle: TextStyle(
+                                  color: colors.onSurfaceVariant,
+                                ),
+                                weekendStyle: TextStyle(
+                                  color: colors.onSurfaceVariant,
+                                ),
                               ),
-                              selectedDecoration: const BoxDecoration(
-                                color: brandBlue,
-                                shape: BoxShape.circle,
+                              headerStyle: const HeaderStyle(
+                                titleCentered: true,
+                                formatButtonVisible: false,
                               ),
-                              markerDecoration: BoxDecoration(
-                                color: colors.error,
-                                shape: BoxShape.circle,
-                              ),
-                              outsideDaysVisible: false,
+                              onDaySelected: (selected, focused) =>
+                                  setState(() {
+                                _selectedDay = selected;
+                                _focusedDay = focused;
+                              }),
+                              onPageChanged: (focused) => _focusedDay = focused,
                             ),
-                            daysOfWeekStyle: DaysOfWeekStyle(
-                              weekdayStyle: TextStyle(
-                                color: colors.onSurfaceVariant,
-                              ),
-                              weekendStyle: TextStyle(
-                                color: colors.onSurfaceVariant,
-                              ),
-                            ),
-                            headerStyle: const HeaderStyle(
-                              titleCentered: true,
-                              formatButtonVisible: false,
-                            ),
-                            onDaySelected: (selected, focused) => setState(() {
-                              _selectedDay = selected;
-                              _focusedDay = focused;
-                            }),
-                            onPageChanged: (focused) => _focusedDay = focused,
-                          ),
                           ),
                         ),
                       ),

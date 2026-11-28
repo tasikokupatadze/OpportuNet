@@ -47,12 +47,9 @@ class _SignUpScreenState extends State<SignUpScreen> {
     required IconData icon,
     required BuildContext context,
   }) {
-    const brand = Color(0xff84d6fe);
-    const darkBrand = Color(0xff2b88b4);
-
     return InputDecoration(
       labelText: label,
-      prefixIcon: Icon(icon, color: darkBrand),
+      prefixIcon: Icon(icon, color: brandBlueDark),
       filled: true,
       fillColor: Theme.of(context).cardColor,
       border: OutlineInputBorder(
@@ -65,7 +62,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
       ),
       focusedBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(14),
-        borderSide: const BorderSide(color: brand, width: 2),
+        borderSide: const BorderSide(color: brandBlue, width: 2),
       ),
     );
   }
@@ -77,9 +74,6 @@ class _SignUpScreenState extends State<SignUpScreen> {
 
   @override
   Widget build(BuildContext context) {
-    const brand = Color(0xff84d6fe);
-    const darkBrand = Color(0xff2b88b4);
-
     return Scaffold(
       appBar: AppBar(
         automaticallyImplyLeading: false,
@@ -215,7 +209,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
                   CheckboxListTile(
                     contentPadding: EdgeInsets.zero,
                     controlAffinity: ListTileControlAffinity.leading,
-                    activeColor: brand,
+                    activeColor: brandBlue,
                     value: _acceptedTerms,
                     onChanged: (value) {
                       setState(() {
@@ -233,7 +227,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
                           TextSpan(
                             text: context.l10n.terms,
                             style: const TextStyle(
-                              color: darkBrand,
+                              color: brandBlueDark,
                               fontWeight: FontWeight.bold,
                             ),
                             recognizer: TapGestureRecognizer()
@@ -247,7 +241,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
                           TextSpan(
                             text: context.l10n.privacyPolicy,
                             style: const TextStyle(
-                              color: darkBrand,
+                              color: brandBlueDark,
                               fontWeight: FontWeight.bold,
                             ),
                             recognizer: TapGestureRecognizer()
@@ -309,7 +303,8 @@ class _SignUpScreenState extends State<SignUpScreen> {
                               if (pswrdctrl.text != confirmPswrdctrl.text) {
                                 ScaffoldMessenger.of(context).showSnackBar(
                                   SnackBar(
-                                    content: Text(context.l10n.passwordsDontMatch),
+                                    content:
+                                        Text(context.l10n.passwordsDontMatch),
                                   ),
                                 );
                                 return;
@@ -328,8 +323,8 @@ class _SignUpScreenState extends State<SignUpScreen> {
 
                               setState(() => _isSigningUp = true);
                               try {
-                                await FirebaseAuth.instance.setLanguageCode(
-                                    context.appLanguageCode);
+                                await FirebaseAuth.instance
+                                    .setLanguageCode(context.appLanguageCode);
                                 final email = signupemailctrl.text.trim();
 
                                 final userCredential = await FirebaseAuth
@@ -374,7 +369,8 @@ class _SignUpScreenState extends State<SignUpScreen> {
                                         },
                                         child: Text(
                                           context.l10n.ok,
-                                          style: TextStyle(color: darkBrand),
+                                          style:
+                                              TextStyle(color: brandBlueDark),
                                         ),
                                       ),
                                     ],
@@ -390,8 +386,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
                                 if (e.code == 'email-already-in-use') {
                                   message = context.l10n.emailInUse;
                                 } else if (e.code == 'weak-password') {
-                                  message =
-                                      context.l10n.strongerPassword;
+                                  message = context.l10n.strongerPassword;
                                 } else if (e.code == 'invalid-email') {
                                   message = context.l10n.invalidEmail;
                                 }
@@ -418,7 +413,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
                               }
                             },
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: brand,
+                        backgroundColor: brandBlue,
                         foregroundColor: brandInk,
                         elevation: 0,
                         shape: RoundedRectangleBorder(
@@ -460,7 +455,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
                           child: Text(
                             context.l10n.logIn,
                             style: TextStyle(
-                              color: darkBrand,
+                              color: brandBlueDark,
                               fontWeight: FontWeight.bold,
                             ),
                           ),

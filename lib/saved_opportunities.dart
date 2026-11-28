@@ -51,7 +51,8 @@ Future<void> toggleSaved(
   final l10n = context.l10n;
   final messenger = ScaffoldMessenger.of(context);
   // Reminders are sent in the language the app was in when saving.
-  final lang = Localizations.localeOf(context).languageCode == 'ka' ? 'ka' : 'en';
+  final lang =
+      Localizations.localeOf(context).languageCode == 'ka' ? 'ka' : 'en';
   final hasDeadline =
       data['deadline'] != null || data['registrationDeadline'] != null;
   final doc = saved.doc(key.replaceAll('/', '_'));
