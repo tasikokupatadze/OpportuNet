@@ -13,9 +13,6 @@ class _RoadmapScreenState extends State<RoadmapScreen>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
 
-  static const Color brand = Color(0xff84d6fe);
-  static const Color brandDark = Color(0xff2b88b4);
-
   @override
   void initState() {
     super.initState();
@@ -253,10 +250,10 @@ class _RoadmapScreenState extends State<RoadmapScreen>
               Container(
                 padding: EdgeInsets.all(9),
                 decoration: BoxDecoration(
-                  color: brand.withValues(alpha: 0.18),
+                  color: brandBlue.withValues(alpha: 0.18),
                   borderRadius: BorderRadius.circular(11),
                 ),
-                child: Icon(icon, color: brandDark, size: 21),
+                child: Icon(icon, color: brandBlueDark, size: 21),
               ),
               SizedBox(width: 12),
               Expanded(
@@ -282,13 +279,13 @@ class _RoadmapScreenState extends State<RoadmapScreen>
                     height: 23,
                     alignment: Alignment.center,
                     decoration: BoxDecoration(
-                      color: brand.withValues(alpha: 0.2),
+                      color: brandBlue.withValues(alpha: 0.2),
                       shape: BoxShape.circle,
                     ),
                     child: Text(
                       '${entry.key + 1}',
                       style: TextStyle(
-                        color: brandDark,
+                        color: brandBlueDark,
                         fontSize: 11,
                         fontWeight: FontWeight.bold,
                       ),
@@ -326,7 +323,7 @@ class _RoadmapScreenState extends State<RoadmapScreen>
             padding: EdgeInsets.all(22),
             decoration: BoxDecoration(
               gradient: LinearGradient(
-                colors: [brand, Color(0xffb4e5ff)],
+                colors: [brandBlue, Color(0xffb4e5ff)],
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
               ),
@@ -340,7 +337,7 @@ class _RoadmapScreenState extends State<RoadmapScreen>
                   style: TextStyle(
                     fontSize: 26,
                     fontWeight: FontWeight.bold,
-                    color: Color(0xff17394e),
+                    color: brandInk,
                   ),
                 ),
                 SizedBox(height: 8),
@@ -401,10 +398,10 @@ class _RoadmapScreenState extends State<RoadmapScreen>
                 indicatorSize: TabBarIndicatorSize.tab,
                 dividerColor: Colors.transparent,
                 indicator: BoxDecoration(
-                  color: brand,
+                  color: brandBlue,
                   borderRadius: BorderRadius.circular(12),
                 ),
-                labelColor: Color(0xff17394e),
+                labelColor: brandInk,
                 unselectedLabelColor: Colors.grey.shade600,
                 labelStyle: TextStyle(
                   fontSize: 14,

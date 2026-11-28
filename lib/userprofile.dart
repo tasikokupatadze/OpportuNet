@@ -53,7 +53,7 @@ class UserProfile extends StatelessWidget {
                   padding: EdgeInsets.all(22),
                   decoration: BoxDecoration(
                     gradient: LinearGradient(
-                      colors: [Color(0xff84d6fe), Color(0xffb6ebff)],
+                      colors: [brandBlue, Color(0xffb6ebff)],
                       begin: Alignment.topLeft,
                       end: Alignment.bottomRight,
                     ),
@@ -133,7 +133,7 @@ class UserProfile extends StatelessWidget {
                           style: TextStyle(
                             fontSize: 12,
                             fontWeight: FontWeight.w600,
-                            color: Color(0xff2b88b4),
+                            color: brandBlueDark,
                           ),
                         ),
                       ),
@@ -220,13 +220,16 @@ class UserProfile extends StatelessWidget {
           Container(
             padding: EdgeInsets.all(9),
             decoration: BoxDecoration(
-              color: Color(0xff84d6fe).withValues(alpha: 0.16),
+              color: brandBlue.withValues(alpha: 0.16),
               borderRadius: BorderRadius.circular(12),
             ),
-            child: Icon(icon, color: Color(0xff2b88b4), size: 20),
+            child: Icon(icon, color: brandBlueDark, size: 20),
           ),
           SizedBox(height: 12),
-          Text(title, style: TextStyle(fontSize: 13, color: Theme.of(context).colorScheme.onSurfaceVariant)),
+          Text(title,
+              style: TextStyle(
+                  fontSize: 13,
+                  color: Theme.of(context).colorScheme.onSurfaceVariant)),
           SizedBox(height: 4),
           Text(
             value,
@@ -271,10 +274,10 @@ class UserProfile extends StatelessWidget {
               Container(
                 padding: EdgeInsets.all(9),
                 decoration: BoxDecoration(
-                  color: Color(0xff84d6fe).withValues(alpha: 0.16),
+                  color: brandBlue.withValues(alpha: 0.16),
                   borderRadius: BorderRadius.circular(12),
                 ),
-                child: Icon(icon, color: Color(0xff2b88b4), size: 20),
+                child: Icon(icon, color: brandBlueDark, size: 20),
               ),
               SizedBox(width: 10),
               Text(
@@ -297,7 +300,9 @@ class UserProfile extends StatelessWidget {
           width: 72,
           child: Text(
             label,
-            style: TextStyle(fontSize: 14, color: Theme.of(context).colorScheme.onSurfaceVariant),
+            style: TextStyle(
+                fontSize: 14,
+                color: Theme.of(context).colorScheme.onSurfaceVariant),
           ),
         ),
         Expanded(

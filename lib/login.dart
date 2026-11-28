@@ -92,7 +92,8 @@ Future<AuthCredential?> _nativeGoogleCredential() async {
   } on GoogleSignInException catch (e) {
     if (e.code == GoogleSignInExceptionCode.providerConfigurationError ||
         e.code == GoogleSignInExceptionCode.uiUnavailable) {
-      debugPrint('Native Google sign-in unavailable (${e.description}); using browser flow.');
+      debugPrint(
+          'Native Google sign-in unavailable (${e.description}); using browser flow.');
       return null;
     }
     rethrow;
@@ -191,9 +192,6 @@ class _LoginScreenState extends State<LoginScreen> {
 
   @override
   Widget build(BuildContext context) {
-    const brand = Color(0xff84d6fe);
-    const darkBrand = Color(0xff2b88b4);
-
     return Scaffold(
       appBar: AppBar(
         automaticallyImplyLeading: false,
@@ -227,7 +225,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       labelText: context.l10n.email,
                       prefixIcon: const Icon(
                         Icons.email_outlined,
-                        color: darkBrand,
+                        color: brandBlueDark,
                       ),
                       filled: true,
                       fillColor: Theme.of(context).cardColor,
@@ -243,7 +241,8 @@ class _LoginScreenState extends State<LoginScreen> {
                       ),
                       focusedBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(14),
-                        borderSide: const BorderSide(color: brand, width: 2),
+                        borderSide:
+                            const BorderSide(color: brandBlue, width: 2),
                       ),
                     ),
                   ),
@@ -258,7 +257,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       labelText: context.l10n.password,
                       prefixIcon: const Icon(
                         Icons.lock_outline,
-                        color: darkBrand,
+                        color: brandBlueDark,
                       ),
                       suffixIcon: IconButton(
                         icon: Icon(
@@ -286,7 +285,8 @@ class _LoginScreenState extends State<LoginScreen> {
                       ),
                       focusedBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(14),
-                        borderSide: const BorderSide(color: brand, width: 2),
+                        borderSide:
+                            const BorderSide(color: brandBlue, width: 2),
                       ),
                     ),
                   ),
@@ -308,7 +308,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       child: Text(
                         context.l10n.forgotPassword,
                         style: TextStyle(
-                          color: darkBrand,
+                          color: brandBlueDark,
                           fontWeight: FontWeight.w600,
                         ),
                       ),
@@ -410,12 +410,10 @@ class _LoginScreenState extends State<LoginScreen> {
                                     message = context.l10n.invalidEmail;
                                     break;
                                   case 'too-many-requests':
-                                    message =
-                                        context.l10n.tooManyAttempts;
+                                    message = context.l10n.tooManyAttempts;
                                     break;
                                   case 'need-email-login':
-                                    message =
-                                        context.l10n.emailLoginFirst;
+                                    message = context.l10n.emailLoginFirst;
                                     break;
                                   default:
                                     message = context.l10n.loginFailed;
@@ -437,12 +435,13 @@ class _LoginScreenState extends State<LoginScreen> {
                                   ),
                                 );
                               } finally {
-                                if (mounted)
-                                  {setState(() => _isSigningIn = false);}
+                                if (mounted) {
+                                  setState(() => _isSigningIn = false);
+                                }
                               }
                             },
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: brand,
+                        backgroundColor: brandBlue,
                         foregroundColor: brandInk,
                         elevation: 0,
                         shape: RoundedRectangleBorder(
@@ -502,8 +501,9 @@ class _LoginScreenState extends State<LoginScreen> {
                               setState(() => _isGoogleSigningIn = true);
                               try {
                                 final result = await handleGoogleAutoLink();
-                                if (result?.user == null || !context.mounted)
-                                  {return;}
+                                if (result?.user == null || !context.mounted) {
+                                  return;
+                                }
                                 Navigator.pushReplacement(
                                   context,
                                   MaterialPageRoute(
@@ -534,7 +534,8 @@ class _LoginScreenState extends State<LoginScreen> {
                                   SnackBar(
                                     duration: const Duration(seconds: 8),
                                     content: Text(
-                                      e.code == GoogleSignInExceptionCode.canceled
+                                      e.code ==
+                                              GoogleSignInExceptionCode.canceled
                                           ? context.l10n.googleCancelled
                                           : context.l10n.googleFailed(
                                               e.code.name,
@@ -554,8 +555,9 @@ class _LoginScreenState extends State<LoginScreen> {
                                   ),
                                 );
                               } finally {
-                                if (mounted)
-                                  {setState(() => _isGoogleSigningIn = false);}
+                                if (mounted) {
+                                  setState(() => _isGoogleSigningIn = false);
+                                }
                               }
                             },
                       icon: Image.asset("assets/google.webp", height: 22),
@@ -563,7 +565,7 @@ class _LoginScreenState extends State<LoginScreen> {
                           ? const BusyIndicator()
                           : Text(context.l10n.continueWithGoogle),
                       style: OutlinedButton.styleFrom(
-                        foregroundColor: darkBrand,
+                        foregroundColor: brandBlueDark,
                         side: BorderSide(
                           color: Colors.grey.withValues(alpha: 0.35),
                         ),
@@ -606,7 +608,7 @@ class _LoginScreenState extends State<LoginScreen> {
                           child: Text(
                             context.l10n.signUp,
                             style: TextStyle(
-                              color: darkBrand,
+                              color: brandBlueDark,
                               fontWeight: FontWeight.bold,
                             ),
                           ),

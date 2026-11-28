@@ -124,8 +124,7 @@ class _CommunityFeedState extends State<CommunityFeed> {
                     SliverFillRemaining(
                       hasScrollBody: false,
                       child: LoadError(
-                        message:
-                            context.l10n.loadPostsFailed,
+                        message: context.l10n.loadPostsFailed,
                         onRetry: () =>
                             setState(() => _postsStream = _connectPosts()),
                       ),
@@ -658,11 +657,13 @@ class PostCard extends StatelessWidget {
                         if (!context.mounted) return;
                         ScaffoldMessenger.of(
                           context,
-                        ).showSnackBar(SnackBar(content: Text(context.l10n.postDeleted)));
+                        ).showSnackBar(
+                            SnackBar(content: Text(context.l10n.postDeleted)));
                       } catch (e) {
                         if (!context.mounted) return;
                         ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(content: Text(context.l10n.postDeleteFailed)),
+                          SnackBar(
+                              content: Text(context.l10n.postDeleteFailed)),
                         );
                       }
                     }
@@ -673,7 +674,8 @@ class PostCard extends StatelessWidget {
                       child: Text(context.l10n.viewProfile),
                     ),
                     if (user?.uid == userId || isOrganizer)
-                      PopupMenuItem(value: "delete", child: Text(context.l10n.delete)),
+                      PopupMenuItem(
+                          value: "delete", child: Text(context.l10n.delete)),
                   ],
                 ),
               ],
@@ -898,7 +900,8 @@ class _PostBodyState extends State<_PostBody> {
             ),
             TextButton(
               onPressed: () => setState(() => _expanded = !_expanded),
-              child: Text(_expanded ? context.l10n.seeLess : context.l10n.seeMore),
+              child:
+                  Text(_expanded ? context.l10n.seeLess : context.l10n.seeMore),
             ),
           ],
         );

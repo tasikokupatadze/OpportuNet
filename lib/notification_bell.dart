@@ -75,7 +75,7 @@ class _UnreadBellState extends State<_UnreadBell> {
                   backgroundColor: brandBlue.withValues(alpha: 0.18),
                   foregroundColor: theme.brightness == Brightness.dark
                       ? brandBlue
-                      : const Color(0xff17658b),
+                      : brandDeep,
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(14),
                   ),

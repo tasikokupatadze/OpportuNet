@@ -14,8 +14,14 @@ CollectionReference<Map<String, dynamic>> get _sources =>
 
 /// Fields an organizer may edit before approving (see the rules).
 const kPendingEditableFields = [
-  'title', 'description', 'website', 'ageRequirements', 'cost', 'category',
-  'subjects', 'deadline',
+  'title',
+  'description',
+  'website',
+  'ageRequirements',
+  'cost',
+  'category',
+  'subjects',
+  'deadline',
 ];
 
 /// The listing a pending draft publishes as: the same fields
@@ -169,8 +175,8 @@ class _PendingCard extends StatelessWidget {
     final facts = [
       if (category.isNotEmpty) categoryLabel(context, category),
       if (deadline is Timestamp)
-        context.l10n.deadlineOn(
-            localizations.formatMediumDate(deadline.toDate())),
+        context.l10n
+            .deadlineOn(localizations.formatMediumDate(deadline.toDate())),
       if ('${d['ageRequirements'] ?? ''}'.isNotEmpty) '${d['ageRequirements']}',
       if ('${d['cost'] ?? ''}'.isNotEmpty) '${d['cost']}',
     ];
@@ -262,8 +268,9 @@ class _EditDraftSheetState extends State<_EditDraftSheet> {
     for (final s in (_d['subjects'] as List? ?? const []))
       if (kActivitySubjects.contains(s)) s as String,
   };
-  late DateTime? _deadline =
-      _d['deadline'] is Timestamp ? (_d['deadline'] as Timestamp).toDate() : null;
+  late DateTime? _deadline = _d['deadline'] is Timestamp
+      ? (_d['deadline'] as Timestamp).toDate()
+      : null;
   bool _saving = false;
 
   @override
@@ -449,8 +456,8 @@ class OpportunitySourcesScreen extends StatelessWidget {
         uri.host.isEmpty ||
         !(uri.scheme == 'https' || uri.scheme == 'http') ||
         feed.length > 500) {
-      ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(context.l10n.invalidFeedUrl)));
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text(context.l10n.invalidFeedUrl)));
       return;
     }
     await _sources.add({
@@ -491,14 +498,13 @@ class OpportunitySourcesScreen extends StatelessWidget {
                   Card(
                     child: SwitchListTile(
                       value: doc.data()['enabled'] == true,
-                      onChanged: (on) =>
-                          doc.reference.update({'enabled': on}),
+                      onChanged: (on) => doc.reference.update({'enabled': on}),
                       title: Text('${doc.data()['name'] ?? ''}'),
                       subtitle: Text([
                         '${doc.data()['feedUrl'] ?? ''}',
                         if ('${doc.data()['lastError'] ?? ''}'.isNotEmpty)
-                          context.l10n.sourceError(
-                              '${doc.data()['lastError']}'),
+                          context.l10n
+                              .sourceError('${doc.data()['lastError']}'),
                       ].join('\n')),
                       secondary: IconButton(
                         tooltip: context.l10n.delete,

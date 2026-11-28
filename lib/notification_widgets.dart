@@ -2,8 +2,6 @@ import 'package:material_ui/material_ui.dart';
 
 import 'app_ui.dart';
 
-const _notificationAccent = Color(0xff2b88b4);
-
 @immutable
 class NotificationItemData {
   final String id;
@@ -129,8 +127,7 @@ class NotificationInboxView extends StatelessWidget {
                   NotificationStateCard(
                     icon: Icons.lock_outline_rounded,
                     title: context.l10n.updatesWaiting,
-                    message:
-                        context.l10n.signInForUpdates,
+                    message: context.l10n.signInForUpdates,
                   )
                 else if (loadError != null)
                   NotificationStateCard(
@@ -151,8 +148,7 @@ class NotificationInboxView extends StatelessWidget {
                   NotificationStateCard(
                     icon: Icons.notifications_none_rounded,
                     title: context.l10n.noNotificationsYet,
-                    message:
-                        context.l10n.notificationsEmptyBody,
+                    message: context.l10n.notificationsEmptyBody,
                   ),
               ]),
             ),
@@ -284,7 +280,9 @@ class NotificationAlertsCard extends StatelessWidget {
                                 color: colors.onSurface)),
                     const SizedBox(height: 5),
                     Text(
-                      enabled ? context.l10n.alertsEnabled : context.l10n.stayUpToDate,
+                      enabled
+                          ? context.l10n.alertsEnabled
+                          : context.l10n.stayUpToDate,
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
                           color: _readableAccent(context),
                           fontWeight: FontWeight.w600),
@@ -367,7 +365,9 @@ class NotificationUpdateCard extends StatelessWidget {
     final theme = Theme.of(context);
     final colors = theme.colorScheme;
     return Semantics(
-      label: item.isUnread ? context.l10n.unreadNotification : context.l10n.readNotification,
+      label: item.isUnread
+          ? context.l10n.unreadNotification
+          : context.l10n.readNotification,
       child: _Panel(
         highlighted: item.isUnread,
         child: InkWell(
@@ -386,7 +386,9 @@ class NotificationUpdateCard extends StatelessWidget {
                   const SizedBox(width: 12),
                   Expanded(
                     child: Text(
-                      item.isCalendar ? context.l10n.academicCalendar : context.l10n.communityPost,
+                      item.isCalendar
+                          ? context.l10n.academicCalendar
+                          : context.l10n.communityPost,
                       style: theme.textTheme.labelLarge?.copyWith(
                           color: _readableAccent(context),
                           fontWeight: FontWeight.w600),
@@ -424,7 +426,8 @@ class NotificationUpdateCard extends StatelessWidget {
                     const SizedBox(width: 6),
                   ],
                   Expanded(
-                    child: Text(item.opening ? context.l10n.opening : item.timeLabel,
+                    child: Text(
+                        item.opening ? context.l10n.opening : item.timeLabel,
                         style: theme.textTheme.bodySmall
                             ?.copyWith(color: colors.onSurfaceVariant)),
                   ),
@@ -559,7 +562,7 @@ class _IconBubble extends StatelessWidget {
         child: Icon(icon,
             color: Theme.of(context).brightness == Brightness.dark
                 ? brandBlue
-                : _notificationAccent,
+                : brandBlueDark,
             size: 24),
       );
 }
@@ -581,6 +584,4 @@ class _UnreadCount extends StatelessWidget {
 }
 
 Color _readableAccent(BuildContext context) =>
-    Theme.of(context).brightness == Brightness.dark
-        ? brandBlue
-        : const Color(0xff17658b);
+    Theme.of(context).brightness == Brightness.dark ? brandBlue : brandDeep;

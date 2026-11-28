@@ -137,7 +137,7 @@ class _CreatePostState extends State<CreatePost> {
                           children: [
                             CircleAvatar(
                               radius: 24,
-                              backgroundColor: Color(0xff84d6fe),
+                              backgroundColor: brandBlue,
                               child:
                                   Icon(Icons.person, color: brandInk, size: 28),
                             ),
@@ -159,7 +159,7 @@ class _CreatePostState extends State<CreatePost> {
                             labelText: context.l10n.postCategory,
                             prefixIcon: const Icon(
                               Icons.category_outlined,
-                              color: Color(0xff2b88b4),
+                              color: brandBlueDark,
                             ),
                             border: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(14),
@@ -191,7 +191,10 @@ class _CreatePostState extends State<CreatePost> {
                                   .colorScheme
                                   .surfaceContainerHighest,
                               borderRadius: BorderRadius.circular(16),
-                              border: Border.all(color: Theme.of(context).colorScheme.outlineVariant),
+                              border: Border.all(
+                                  color: Theme.of(context)
+                                      .colorScheme
+                                      .outlineVariant),
                             ),
                             child: TextField(
                               controller: controller,
@@ -215,7 +218,7 @@ class _CreatePostState extends State<CreatePost> {
                           child: ElevatedButton(
                             onPressed: _isPosting ? null : uploadPost,
                             style: ElevatedButton.styleFrom(
-                              backgroundColor: const Color(0xff84d6fe),
+                              backgroundColor: brandBlue,
                               foregroundColor: brandInk,
                               padding: const EdgeInsets.symmetric(vertical: 14),
                               shape: RoundedRectangleBorder(

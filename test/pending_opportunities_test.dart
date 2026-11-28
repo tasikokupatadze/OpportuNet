@@ -4,8 +4,8 @@ import 'package:opportunet/pending_opportunities.dart';
 
 void main() {
   test('approving needs a title and a known category', () {
-    expect(listingFromDraft({'title': '', 'category': 'olympiads'}, 'u'),
-        isNull);
+    expect(
+        listingFromDraft({'title': '', 'category': 'olympiads'}, 'u'), isNull);
     expect(listingFromDraft({'title': 'A', 'category': 'posts'}, 'u'), isNull);
   });
 

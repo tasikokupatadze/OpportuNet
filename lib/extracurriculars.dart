@@ -18,8 +18,18 @@ import 'package:flutter/foundation.dart';
 const _aiEndpoint = "https://callai-docslpktsq-uc.a.run.app";
 
 const kActivitySubjects = [
-  "Maths", "Physics", "Chemistry", "Biology", "Robotics", "Informatics",
-  "Programming", "Astrophysics", "Linguistics", "English", "Economics", "Other",
+  "Maths",
+  "Physics",
+  "Chemistry",
+  "Biology",
+  "Robotics",
+  "Informatics",
+  "Programming",
+  "Astrophysics",
+  "Linguistics",
+  "English",
+  "Economics",
+  "Other",
 ];
 
 /// Form values the AI pulled out of a pasted post. AI output is untrusted:
@@ -258,8 +268,8 @@ class _AddActivityScreenState extends State<AddActivityScreen> {
 
       if (!mounted) return;
 
-      ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text(context.l10n.activityPublished)));
+      ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(context.l10n.activityPublished)));
 
       Navigator.pop(context);
     } catch (e) {
@@ -317,8 +327,7 @@ class _AddActivityScreenState extends State<AddActivityScreen> {
 
     if (draft == null) {
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-        content:
-            Text(context.l10n.couldntReadPost),
+        content: Text(context.l10n.couldntReadPost),
       ));
       return;
     }
@@ -336,8 +345,7 @@ class _AddActivityScreenState extends State<AddActivityScreen> {
       if (d.deadline != null) _deadline = d.deadline;
     });
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-      content: Text(
-          context.l10n.formFilled),
+      content: Text(context.l10n.formFilled),
     ));
   }
 
@@ -408,8 +416,9 @@ class _AddActivityScreenState extends State<AddActivityScreen> {
               icon: _isFilling
                   ? const BusyIndicator()
                   : const Icon(Icons.auto_awesome, color: brandBlueDark),
-              label: Text(
-                  _isFilling ? context.l10n.readingPost : context.l10n.fillWithAiFromPost),
+              label: Text(_isFilling
+                  ? context.l10n.readingPost
+                  : context.l10n.fillWithAiFromPost),
             ),
             const SizedBox(height: 16),
             TextField(
@@ -496,7 +505,8 @@ class _AddActivityScreenState extends State<AddActivityScreen> {
                               children: [
                                 for (final subject in _subjects)
                                   CheckboxListTile(
-                                    title: Text(subjectLabel(context, subject.toLowerCase())),
+                                    title: Text(subjectLabel(
+                                        context, subject.toLowerCase())),
                                     value: draft.contains(subject),
                                     controlAffinity:
                                         ListTileControlAffinity.leading,

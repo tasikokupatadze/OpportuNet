@@ -152,7 +152,8 @@ class _SchoolScreenState extends State<SchoolScreen> {
                 icon: const Icon(Icons.open_in_new, size: 18),
                 label: Text(context.l10n.visitWebsite,
                     textAlign: TextAlign.center,
-                    semanticsLabel: context.l10n.visitSchoolWebsite('${school['title']}')),
+                    semanticsLabel:
+                        context.l10n.visitSchoolWebsite('${school['title']}')),
               ),
             ),
           ],

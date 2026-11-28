@@ -23,7 +23,8 @@ typedef _Msg = QueryDocumentSnapshot<Map<String, dynamic>>;
 /// under this id.
 const _earlierChatId = '';
 
-String _chatIdOf(_Msg doc) => (doc.data()['chatId'] as String?) ?? _earlierChatId;
+String _chatIdOf(_Msg doc) =>
+    (doc.data()['chatId'] as String?) ?? _earlierChatId;
 
 bool _isErrorReply(String reply) =>
     reply.startsWith('Error') || reply.startsWith('API Error');
@@ -76,8 +77,7 @@ class _AiChatState extends State<AiChat> {
 
     final open = <(DateTime?, String)>[];
     for (final section in kCategories.keys) {
-      final snap =
-          await FirebaseFirestore.instance.collection(section).get();
+      final snap = await FirebaseFirestore.instance.collection(section).get();
       for (final doc in snap.docs) {
         final data = doc.data();
         final deadline = opportunityDeadline(data);
@@ -194,8 +194,7 @@ class _AiChatState extends State<AiChat> {
       final history = <Map<String, dynamic>>[
         {
           'role': 'system',
-          'content':
-              'You are a helpful admissions assistant for Georgian students who want to study abroad. Give clear, practical, supportive answers. '
+          'content': 'You are a helpful admissions assistant for Georgian students who want to study abroad. Give clear, practical, supportive answers. '
               'Today is ${DateTime.now().toIso8601String().substring(0, 10)}. '
               'Your replies are read on a phone screen, so never use tables. '
               'Use short headings, bullet points and short paragraphs instead. '
@@ -397,7 +396,8 @@ class _AiChatState extends State<AiChat> {
                         if (messages.isNotEmpty)
                           IconButton(
                             tooltip: context.l10n.deleteThisChat,
-                            icon: Icon(Icons.delete_outline, color: colors.error),
+                            icon:
+                                Icon(Icons.delete_outline, color: colors.error),
                             onPressed: () => _deleteChat(_chatId),
                           ),
                         IconButton(
@@ -425,7 +425,8 @@ class _AiChatState extends State<AiChat> {
                     padding: const EdgeInsets.fromLTRB(12, 10, 12, 14),
                     decoration: BoxDecoration(
                       color: colors.surface,
-                      border: Border(top: BorderSide(color: colors.outlineVariant)),
+                      border:
+                          Border(top: BorderSide(color: colors.outlineVariant)),
                     ),
                     child: Row(
                       crossAxisAlignment: CrossAxisAlignment.end,
@@ -656,7 +657,6 @@ class _AiEmptyState extends StatelessWidget {
   const _AiEmptyState({required this.onPick});
 
   final ValueChanged<String> onPick;
-
 
   @override
   Widget build(BuildContext context) {

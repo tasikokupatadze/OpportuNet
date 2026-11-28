@@ -84,8 +84,7 @@ Future<void> openAppNotification(
         return;
       }
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-        content: Text(
-            context.l10n.markReadFailedView),
+        content: Text(context.l10n.markReadFailedView),
       ));
     }
   }
@@ -142,8 +141,7 @@ Future<void> openAppNotification(
       return;
     }
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-      content: Text(
-          context.l10n.eventOpenFailed),
+      content: Text(context.l10n.eventOpenFailed),
     ));
   }
 }
@@ -157,9 +155,10 @@ Future<void> openOpportunity(
 ) async {
   final messenger = ScaffoldMessenger.of(context);
   final l10n = context.l10n;
-  if (!home.kCategories.containsKey(section) || id.isEmpty || id.contains('/')) {
-    messenger.showSnackBar(
-        SnackBar(content: Text(l10n.notificationCantOpen)));
+  if (!home.kCategories.containsKey(section) ||
+      id.isEmpty ||
+      id.contains('/')) {
+    messenger.showSnackBar(SnackBar(content: Text(l10n.notificationCantOpen)));
     return;
   }
   try {
@@ -170,8 +169,8 @@ Future<void> openOpportunity(
         .timeout(const Duration(seconds: 8));
     if (!context.mounted) return;
     if (!doc.exists) {
-      messenger.showSnackBar(
-          SnackBar(content: Text(l10n.opportunityUnavailable)));
+      messenger
+          .showSnackBar(SnackBar(content: Text(l10n.opportunityUnavailable)));
       return;
     }
     await Navigator.of(context).push(MaterialPageRoute<void>(
@@ -182,8 +181,7 @@ Future<void> openOpportunity(
       }),
     ));
   } catch (_) {
-    messenger.showSnackBar(
-        SnackBar(content: Text(l10n.opportunityOpenFailed)));
+    messenger.showSnackBar(SnackBar(content: Text(l10n.opportunityOpenFailed)));
   }
 }
 
@@ -248,8 +246,7 @@ class _NotificationInboxState extends State<_NotificationInbox> {
     } catch (_) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content:
-              Text(context.l10n.markAllReadFailed),
+          content: Text(context.l10n.markAllReadFailed),
         ));
       }
     } finally {
@@ -320,8 +317,7 @@ class _NotificationInboxState extends State<_NotificationInbox> {
                 return NotificationInboxView(
                   items: items,
                   loading: loading,
-                  loadError:
-                      hasError ? context.l10n.checkConnection : null,
+                  loadError: hasError ? context.l10n.checkConnection : null,
                   onRetry: () => setState(_connect),
                   alertsEnabled: service.enabled,
                   alertsBusy: service.busy,

@@ -11,10 +11,11 @@ const kPlayStoreUrl =
 
 /// The text sent when a student shares an opportunity: title, its website
 /// (when it has one) and a line pointing to the app.
-String opportunityShareText(String title, String website, String appLine) =>
-    [title.trim(), website.trim(), appLine]
-        .where((line) => line.isNotEmpty)
-        .join('\n');
+String opportunityShareText(String title, String website, String appLine) => [
+      title.trim(),
+      website.trim(),
+      appLine
+    ].where((line) => line.isNotEmpty).join('\n');
 
 class ActivityDetailsScreen extends StatelessWidget {
   final Map<String, dynamic> activity;
@@ -29,7 +30,8 @@ class ActivityDetailsScreen extends StatelessWidget {
     }
   }
 
-  Future<void> _share(BuildContext context, String title, String website) async {
+  Future<void> _share(
+      BuildContext context, String title, String website) async {
     final box = context.findRenderObject() as RenderBox?;
     final text = opportunityShareText(
         title, website, context.l10n.shareFoundOn(kPlayStoreUrl));
@@ -55,7 +57,8 @@ class ActivityDetailsScreen extends StatelessWidget {
         (activity["ageRequirements"] ?? activity["age"] ?? "").toString();
     final age = rawAge.trim().isEmpty ? context.l10n.notSpecified : rawAge;
     final rawCost = (activity["cost"] ?? "").toString();
-    final cost = rawCost.trim().isEmpty ? context.l10n.costNotSpecified : rawCost;
+    final cost =
+        rawCost.trim().isEmpty ? context.l10n.costNotSpecified : rawCost;
     final imageUrl = activity["imageUrl"] as String?;
 
     return Scaffold(

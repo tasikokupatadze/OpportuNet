@@ -445,8 +445,8 @@ class _HomeFeedState extends State<HomeFeed> {
 
     switch (_sort) {
       case SortBy.forYou:
-        items.sort((a, b) => compareForYou(a, b,
-            age: _profileAge, interests: _interests));
+        items.sort((a, b) =>
+            compareForYou(a, b, age: _profileAge, interests: _interests));
         break;
 
       case SortBy.newest:
@@ -764,8 +764,7 @@ class _HomeFeedState extends State<HomeFeed> {
             icon: const Icon(Icons.insights_rounded),
             onPressed: () => Navigator.push(
               context,
-              MaterialPageRoute(
-                  builder: (_) => const OpportunityStatsScreen()),
+              MaterialPageRoute(builder: (_) => const OpportunityStatsScreen()),
             ),
           ),
         if (widget.isOrganizer)

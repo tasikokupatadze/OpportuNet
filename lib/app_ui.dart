@@ -31,11 +31,13 @@ const brandInk = Color(0xff17394e);
 // Icon/accent blue. Use brandInk or colorScheme roles for text: brandBlue is too
 // light to read as text on white.
 const brandBlueDark = Color(0xff2b88b4);
+// Theme seed; also the readable accent on light backgrounds.
+const brandDeep = Color(0xff17658b);
 
 ThemeData appTheme(Brightness brightness) {
   final dark = brightness == Brightness.dark;
   final scheme = ColorScheme.fromSeed(
-    seedColor: const Color(0xff17658b),
+    seedColor: brandDeep,
     brightness: brightness,
   );
   return ThemeData(
